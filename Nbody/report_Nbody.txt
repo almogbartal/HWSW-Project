@@ -1,7 +1,6 @@
 1. Benchmark Analysis:
 The Nbody benchmark simulates the movement of the planets (sun, jupiter, saturn, uranus, neptune) to test how well Python handles heavy math and loops.
-It uses only basic python libraries.
-For heavy calculations, it uses the basic Math lib and avoids external heavy libraries like NumPy.
+It uses only basic python math operations and avoids external heavy libraries like NumPy.
 For data structures, it uses basic python lists, with each body represented as object containing seven floating point variables: 3D position, 3D velocity, and mass. 	
 	
 The algorithm uses basic physics to calculate the gravity between every pair of bodies (O(n^2)), updating their positions step by step.
