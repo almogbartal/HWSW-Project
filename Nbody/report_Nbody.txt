@@ -10,4 +10,24 @@
 	In addition, doing floating-point math and calculating square roots sequentially is really slow.
 	
 2. Detecting Bottlenecks
+   As we can see, the perf report and the Flame Graph immediately point to the same major issue:
+   Python's interpreter overhead.
+   In the perf report, we can see that _PyEval_EvalFrameDefault consumes 44.76% of the total runtime.
+   In the Flame Graph, it appears as a massive vertical stack and a wide base dedicated entirely to frame evaluations.
+   both of these results make it clear that the script spends most of its execution runtime inside Python's internal interpreter loop.
    
+   In addition, the perf report reveals more bottlenecks:
+   - heavy floating-point math operations such as:
+     - float_mul (6.18%)
+     - float_sub (3.01%)
+     - float_add (3.00%)
+	 that runs in the physics calculation inside the O(n^2) loops
+   - frequent object memory management overhead shown by float_dealloc (5.12%) that is caused by python keeping everything as object structures 
+   - continuous list modifications or lookups like:
+     - list_ass_subscript (3.95%)
+	 - list_subscript (2.73%)
+	 that are caused because the basic list use
+	 
+3.	Optimization
+	
+	 
