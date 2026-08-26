@@ -37,7 +37,6 @@ we broke it down into three concepts:
  -Vectorized Operations and Indexing: Instead of cusing slow 'for' loops, we used np.triu_indices to grab all planet pairs at once.
   This enables us to calculate coordinate differences and velocity updates for all arrays at once in a single operation.
 
- -C Level Execution: Even though the code is written in Python, 
-  the heavy math is offloaded to pre-compiled C libraries running inside NumPy.
+ -C Level Execution: Even though the code is written in Python, the heavy math is offloaded to pre-compiled C libraries running inside NumPy.
   This completely skips the slow Python interpreter (PyEval_EvalFrameDefault) and stops the creation of temporary heap objects (float_dealloc)
 	 
