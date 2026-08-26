@@ -1,0 +1,13 @@
+1. Benchmark Analysis:
+	The Nbody benchmark simulates the movement of planets to test how well Python handles heavy math and loops.
+	It uses only basic python libraries.
+	For heavy calculations, it uses the basic Math lib and avoids external heavy libraries like NumPy.
+	For data structures, it uses basic python lists, with each body represented as object containing seven floating point variables: 3D position, 3D velocity, and mass. 	
+	
+	The algorithm uses basic physics to calculate the gravity between every pair of bodies (O(n^2)), updating their positions step by step.
+	Because it checks every pair, the main bottleneck will likely be the inner loop that updates these forces.
+	Since this loop runs millions of times, just accessing the object variables creates a lot of overhead in Python.
+	In addition, doing floating-point math and calculating square roots sequentially is really slow.
+	
+2. Detecting Bottlenecks
+   
