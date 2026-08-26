@@ -23,7 +23,7 @@ perf script -i "perf_baseline.data" \
     > Nbody_flamegraph.html
 
 # --- Post-optimization benchmark execution ---
-perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 nbody_optimized.py
+perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 Nbody_benchmark_optimized.py
 perf report -i "perf_optimized.data" --stdio > perf_report_NBody_optimized.txt
 perf script -i "perf_optimized.data" \
     | FlameGraph/stackcollapse-perf.pl \
