@@ -3,6 +3,10 @@
 
 set -e
 
+# --- VM Permissions Fix (Required for this specific VM environment) ---
+echo 0 > /proc/sys/kernel/kptr_restrict
+echo -1 > /proc/sys/kernel/perf_event_paranoid
+
 # --- Environment setup & dependency installation ---
 # sudo apt-get update && sudo apt-get install -y python3-dbg
 rm -rf FlameGraph
