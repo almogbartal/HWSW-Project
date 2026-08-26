@@ -1,16 +1,16 @@
 import pyperf
+import numpy as np
 
 __contact__ = "collinwinter@google.com (Collin Winter)"
 DEFAULT_ITERATIONS = 20000
 DEFAULT_REFERENCE = 'sun'
 
-
 PI = 3.14159265358979323
 SOLAR_MASS = 4 * PI * PI
 DAYS_PER_YEAR = 365.24
 
-
-BODIES = {
+# Initial dictionary of bodies
+BODIES_INIT = {
     'sun': ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], SOLAR_MASS),
 
     'jupiter': ([4.84143144246472090e+00,
@@ -43,109 +43,83 @@ BODIES = {
                 [2.68067772490389322e-03 * DAYS_PER_YEAR,
                  1.62824170038242295e-03 * DAYS_PER_YEAR,
                  -9.51592254519715870e-05 * DAYS_PER_YEAR],
-                5.15138902046611451e-05 * SOLAR_MASS)
-}
+                5.15138902046611451e-05 * SOLAR_MASS)}
+
+BODY_NAMES = list(BODIES_INIT.keys())
 
 
-# Convert the nested body representation into separate arrays.
-# This representation is independent of the number of bodies.
-SYSTEM = list(BODIES.values())
-
-X = [body[0][0] for body in SYSTEM]
-Y = [body[0][1] for body in SYSTEM]
-Z = [body[0][2] for body in SYSTEM]
-
-VX = [body[1][0] for body in SYSTEM]
-VY = [body[1][1] for body in SYSTEM]
-VZ = [body[1][2] for body in SYSTEM]
-
-MASS = [body[2] for body in SYSTEM]
-
-PAIRS = []
-num_bodies = len(SYSTEM)
-
-for i in range(num_bodies - 1):
-    for j in range(i + 1, num_bodies):
-        PAIRS.append((i, j))
+def get_system_arrays():
+    positions = np.array([BODIES_INIT[name][0] for name in BODY_NAMES], dtype=np.float64)
+    velocities = np.array([BODIES_INIT[name][1] for name in BODY_NAMES], dtype=np.float64)
+    masses = np.array([BODIES_INIT[name][2] for name in BODY_NAMES], dtype=np.float64)
+    return positions, velocities, masses
 
 
-def advance(dt, n):
+def advance(dt, n, positions, velocities, masses):
+    num_bodies = len(masses)
+    # Prepare indices for upper/lower triangle interactions to avoid redundant calculations
+    i_indices, j_indices = np.triu_indices(num_bodies, k=1)
+
     for _ in range(n):
+        # Vectorized coordinate differences for all pairs at once
+        dx = positions[i_indices, 0] - positions[j_indices, 0]
+        dy = positions[i_indices, 1] - positions[j_indices, 1]
+        dz = positions[i_indices, 2] - positions[j_indices, 2]
 
-        for i, j in PAIRS:
-            dx = X[i] - X[j]
-            dy = Y[i] - Y[j]
-            dz = Z[i] - Z[j]
+        dist_sq = dx * dx + dy * dy + dz * dz
+        mag = dt * (dist_sq ** (-1.5))
 
-            mag = dt * (
-                (dx * dx + dy * dy + dz * dz) ** (-1.5)
-            )
+        b1m = masses[i_indices] * mag
+        b2m = masses[j_indices] * mag
 
-            b1m = MASS[i] * mag
-            b2m = MASS[j] * mag
+        # Update velocities using vectorized operations
+        velocities[i_indices, 0] -= dx * b2m
+        velocities[i_indices, 1] -= dy * b2m
+        velocities[i_indices, 2] -= dz * b2m
 
-            VX[i] -= dx * b2m
-            VY[i] -= dy * b2m
-            VZ[i] -= dz * b2m
+        velocities[j_indices, 0] += dx * b1m
+        velocities[j_indices, 1] += dy * b1m
+        velocities[j_indices, 2] += dz * b1m
 
-            VX[j] += dx * b1m
-            VY[j] += dy * b1m
-            VZ[j] += dz * b1m
-
-        for i in range(num_bodies):
-            X[i] += dt * VX[i]
-            Y[i] += dt * VY[i]
-            Z[i] += dt * VZ[i]
+        # Update positions
+        positions += dt * velocities
 
 
-def report_energy():
-    e = 0.0
-
-    for i, j in PAIRS:
-        dx = X[i] - X[j]
-        dy = Y[i] - Y[j]
-        dz = Z[i] - Z[j]
-
-        e -= (
-            MASS[i] * MASS[j]
-        ) / ((dx * dx + dy * dy + dz * dz) ** 0.5)
-
-    for i in range(num_bodies):
-        e += (
-            MASS[i] *
-            (VX[i] * VX[i] +
-             VY[i] * VY[i] +
-             VZ[i] * VZ[i])
-            / 2.0
-        )
-
-    return e
+def report_energy(positions, velocities, masses):
+    num_bodies = len(masses)
+    i_idx, j_idx = np.triu_indices(num_bodies, k=1)
+    
+    dx = positions[i_idx, 0] - positions[j_idx, 0]
+    dy = positions[i_idx, 1] - positions[j_idx, 1]
+    dz = positions[i_idx, 2] - positions[j_idx, 2]
+    
+    potential = np.sum((masses[i_idx] * masses[j_idx]) / np.sqrt(dx * dx + dy * dy + dz * dz))
+    kinetic = 0.5 * np.sum(masses * np.sum(velocities ** 2, axis=1))
+    
+    return kinetic - potential
 
 
-def offset_momentum(reference):
-    px = 0.0
-    py = 0.0
-    pz = 0.0
-
-    for i in range(num_bodies):
-        px -= VX[i] * MASS[i]
-        py -= VY[i] * MASS[i]
-        pz -= VZ[i] * MASS[i]
-
-    VX[reference] = px / MASS[reference]
-    VY[reference] = py / MASS[reference]
-    VZ[reference] = pz / MASS[reference]
+def offset_momentum(reference_name, positions, velocities, masses):
+    ref_idx = BODY_NAMES.index(reference_name)
+    px = np.sum(velocities[:, 0] * masses)
+    py = np.sum(velocities[:, 1] * masses)
+    pz = np.sum(velocities[:, 2] * masses)
+    
+    velocities[ref_idx, 0] = -px / masses[ref_idx]
+    velocities[ref_idx, 1] = -py / masses[ref_idx]
+    velocities[ref_idx, 2] = -pz / masses[ref_idx]
 
 
 def bench_nbody(loops, reference, iterations):
-    offset_momentum(reference)
+    positions, velocities, masses = get_system_arrays()
+    offset_momentum(reference, positions, velocities, masses)
 
     t0 = pyperf.perf_counter()
 
     for _ in range(loops):
-        report_energy()
-        advance(0.01, iterations)
-        report_energy()
+        report_energy(positions, velocities, masses)
+        advance(0.01, iterations, positions, velocities, masses)
+        report_energy(positions, velocities, masses)
 
     return pyperf.perf_counter() - t0
 
@@ -156,31 +130,16 @@ def add_cmdline_args(cmd, args):
 
 if __name__ == '__main__':
     runner = pyperf.Runner(add_cmdline_args=add_cmdline_args)
-
-    runner.metadata['description'] = "optimized n-body benchmark"
-
-    runner.argparser.add_argument(
-        "--iterations",
-        type=int,
-        default=DEFAULT_ITERATIONS,
-        help="Number of nbody advance() iterations "
-             "(default: %s)" % DEFAULT_ITERATIONS
-    )
-
-    runner.argparser.add_argument(
-        "--reference",
-        type=str,
-        default=DEFAULT_REFERENCE,
-        help="nbody reference (default: %s)" % DEFAULT_REFERENCE
-    )
+    runner.metadata['description'] = "Fully vectorized NumPy n-body benchmark"
+    runner.argparser.add_argument("--iterations",
+                                  type=int, default=DEFAULT_ITERATIONS,
+                                  help="Number of nbody advance() iterations "
+                                       "(default: %s)" % DEFAULT_ITERATIONS)
+    runner.argparser.add_argument("--reference",
+                                  type=str, default=DEFAULT_REFERENCE,
+                                  help="nbody reference (default: %s)"
+                                       % DEFAULT_REFERENCE)
 
     args = runner.parse_args()
-
-    reference_index = list(BODIES.keys()).index(args.reference)
-
-    runner.bench_time_func(
-        'nbody_optimized',
-        bench_nbody,
-        reference_index,
-        args.iterations
-    )
+    runner.bench_time_func('nbody_vectorized', bench_nbody,
+                           args.reference, args.iterations)
