@@ -1,4 +1,4 @@
-script_content = """#!/bin/bash
+#!/bin/bash
 # script_NBody.sh
 
 set -e
@@ -26,9 +26,3 @@ perf script -i "perf_baseline.data" \
 #     | FlameGraph/stackcollapse-perf.pl \
 #     | FlameGraph/flamegraph.pl --title "NBody - Optimized" \
 #     > Nbody_optimized_flamegraph.html
-"""
-
-with open("script_NBody.sh", "w") as f:
-    f.write(script_content)
-
-print("script_NBody.sh")
