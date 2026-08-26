@@ -31,9 +31,15 @@ we rewrote the code using NumPy arrays and vectorization to completely eliminate
 planet pairs one by one, we packed all the positions, velocities, and masses into flat, contiguous blocks of memory.
 we broke it down into three concepts:
 
- -Contiguous Memory Layout: Standard Python lists are arrays of pointers scattered across RAM, forcing the CPU to waste time chasing pointers.      NumPy stores data sequentially in continuous memory blocks, allowing the CPU to pre-fetch data.
+ -Contiguous Memory Layout: Standard Python lists are arrays of pointers scattered across RAM, 
+  forcing the CPU to waste time chasing pointers.NumPy stores data sequentially in continuous memory blocks, allowing the CPU to pre-fetch          data.
 
- -Vectorized Operations and Indexing: Instead of cusing slow 'for' loops, we used np.triu_indices to grab all planet pairs at once. This enables    us to calculate coordinate differences and velocity updates for all arrays at once in a single operation.
+ -Vectorized Operations and Indexing: Instead of cusing slow 'for' loops, we used np.triu_indices to grab all planet pairs at once.
+  This enables us to calculate coordinate differences and velocity updates
+  for all arrays at once in a single operation.
 
- -C Level Execution: Even though the code is written in Python, the heavy math is offloaded to pre-compiled C libraries running inside NumPy.       This completely skips the slow Python interpreter (PyEval_EvalFrameDefault) and stops the creation of temporary heap objects (float_dealloc)
+ -C Level Execution: Even though the code is written in Python, 
+  the heavy math is offloaded to pre-compiled C libraries running inside NumPy.
+  This completely skips the slow Python interpreter (PyEval_EvalFrameDefault) and 
+  stops the creation of temporary heap objects (float_dealloc)
 	 
