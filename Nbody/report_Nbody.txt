@@ -5,7 +5,7 @@ It uses basic python data structures, with each body represented by a tuple cont
 	
 The algorithm calculates the gravity between every pair of bodies (O(n^2)), updating their positions step by step.
 Although there are only 5 bodies (which makes 10 unique pairs), every pair's calculation is repeated in many iterations inside the loop.
-Since this loop runs many times, we expect the the loop to be a major performence bottleneck.
+Since this loop runs many times, we expect the loop to be a major performence bottleneck.
 In addition, for every iteration, the loop does sequential floating-point math (subtraction, multiplication, power/square root), and repeatedly accesses and modifies the list elements using indexing, which probably creates a lot of overhead in python.
 
 2. Detecting Bottlenecks
