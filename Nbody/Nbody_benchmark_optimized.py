@@ -5,19 +5,10 @@ DEFAULT_ITERATIONS = 20000
 DEFAULT_REFERENCE = 'sun'
 
 
-def combinations(l):
-    """Pure-Python implementation of itertools.combinations(l, 2)."""
-    result = []
-    for x in range(len(l) - 1):
-        ls = l[x + 1:]
-        for y in ls:
-            result.append((l[x], y))
-    return result
-
-
 PI = 3.14159265358979323
 SOLAR_MASS = 4 * PI * PI
 DAYS_PER_YEAR = 365.24
+
 
 BODIES = {
     'sun': ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], SOLAR_MASS),
@@ -52,72 +43,106 @@ BODIES = {
                 [2.68067772490389322e-03 * DAYS_PER_YEAR,
                  1.62824170038242295e-03 * DAYS_PER_YEAR,
                  -9.51592254519715870e-05 * DAYS_PER_YEAR],
-                5.15138902046611451e-05 * SOLAR_MASS)}
+                5.15138902046611451e-05 * SOLAR_MASS)
+}
 
 
+# Convert the nested body representation into separate arrays.
+# This representation is independent of the number of bodies.
 SYSTEM = list(BODIES.values())
-PAIRS = combinations(SYSTEM)
+
+X = [body[0][0] for body in SYSTEM]
+Y = [body[0][1] for body in SYSTEM]
+Z = [body[0][2] for body in SYSTEM]
+
+VX = [body[1][0] for body in SYSTEM]
+VY = [body[1][1] for body in SYSTEM]
+VZ = [body[1][2] for body in SYSTEM]
+
+MASS = [body[2] for body in SYSTEM]
+
+PAIRS = []
+num_bodies = len(SYSTEM)
+
+for i in range(num_bodies - 1):
+    for j in range(i + 1, num_bodies):
+        PAIRS.append((i, j))
 
 
-def advance(dt, n, bodies=SYSTEM, pairs=PAIRS):
+def advance(dt, n):
     for _ in range(n):
-        # Optimized inner loop: caching coordinates locally to avoid repeated list_subscript overhead
-        for (r1, v1, m1), (r2, v2, m2) in pairs:
-            x1, y1, z1 = r1
-            x2, y2, z2 = r2
-            
-            dx = x1 - x2
-            dy = y1 - y2
-            dz = z1 - z2
-            
-            mag = dt * ((dx * dx + dy * dy + dz * dz) ** (-1.5))
-            b1m = m1 * mag
-            b2m = m2 * mag
-            
-            v1[0] -= dx * b2m
-            v1[1] -= dy * b2m
-            v1[2] -= dz * b2m
-            v2[0] += dx * b1m
-            v2[1] += dy * b1m
-            v2[2] += dz * b1m
-            
-        for r, (vx, vy, vz), _ in bodies:
-            r[0] += dt * vx
-            r[1] += dt * vy
-            r[2] += dt * vz
+
+        for i, j in PAIRS:
+            dx = X[i] - X[j]
+            dy = Y[i] - Y[j]
+            dz = Z[i] - Z[j]
+
+            mag = dt * (
+                (dx * dx + dy * dy + dz * dz) ** (-1.5)
+            )
+
+            b1m = MASS[i] * mag
+            b2m = MASS[j] * mag
+
+            VX[i] -= dx * b2m
+            VY[i] -= dy * b2m
+            VZ[i] -= dz * b2m
+
+            VX[j] += dx * b1m
+            VY[j] += dy * b1m
+            VZ[j] += dz * b1m
+
+        for i in range(num_bodies):
+            X[i] += dt * VX[i]
+            Y[i] += dt * VY[i]
+            Z[i] += dt * VZ[i]
 
 
-def report_energy(bodies=SYSTEM, pairs=PAIRS, e=0.0):
-    for (r1, _, m1), (r2, _, m2) in pairs:
-        x1, y1, z1 = r1
-        x2, y2, z2 = r2
-        dx = x1 - x2
-        dy = y1 - y2
-        dz = z1 - z2
-        e -= (m1 * m2) / ((dx * dx + dy * dy + dz * dz) ** 0.5)
-    for _, (vx, vy, vz), m in bodies:
-        e += m * (vx * vx + vy * vy + vz * vz) / 2.
+def report_energy():
+    e = 0.0
+
+    for i, j in PAIRS:
+        dx = X[i] - X[j]
+        dy = Y[i] - Y[j]
+        dz = Z[i] - Z[j]
+
+        e -= (
+            MASS[i] * MASS[j]
+        ) / ((dx * dx + dy * dy + dz * dz) ** 0.5)
+
+    for i in range(num_bodies):
+        e += (
+            MASS[i] *
+            (VX[i] * VX[i] +
+             VY[i] * VY[i] +
+             VZ[i] * VZ[i])
+            / 2.0
+        )
+
     return e
 
 
-def offset_momentum(ref, bodies=SYSTEM, px=0.0, py=0.0, pz=0.0):
-    for (_, [vx, vy, vz], m) in bodies:
-        px -= vx * m
-        py -= vy * m
-        pz -= vz * m
-    (r, v, m) = ref
-    v[0] = px / m
-    v[1] = py / m
-    v[2] = pz / m
+def offset_momentum(reference):
+    px = 0.0
+    py = 0.0
+    pz = 0.0
+
+    for i in range(num_bodies):
+        px -= VX[i] * MASS[i]
+        py -= VY[i] * MASS[i]
+        pz -= VZ[i] * MASS[i]
+
+    VX[reference] = px / MASS[reference]
+    VY[reference] = py / MASS[reference]
+    VZ[reference] = pz / MASS[reference]
 
 
 def bench_nbody(loops, reference, iterations):
-    offset_momentum(BODIES[reference])
+    offset_momentum(reference)
 
-    range_it = range(loops)
     t0 = pyperf.perf_counter()
 
-    for _ in range_it:
+    for _ in range(loops):
         report_energy()
         advance(0.01, iterations)
         report_energy()
@@ -131,16 +156,31 @@ def add_cmdline_args(cmd, args):
 
 if __name__ == '__main__':
     runner = pyperf.Runner(add_cmdline_args=add_cmdline_args)
+
     runner.metadata['description'] = "optimized n-body benchmark"
-    runner.argparser.add_argument("--iterations",
-                                  type=int, default=DEFAULT_ITERATIONS,
-                                  help="Number of nbody advance() iterations "
-                                       "(default: %s)" % DEFAULT_ITERATIONS)
-    runner.argparser.add_argument("--reference",
-                                  type=str, default=DEFAULT_REFERENCE,
-                                  help="nbody reference (default: %s)"
-                                       % DEFAULT_REFERENCE)
+
+    runner.argparser.add_argument(
+        "--iterations",
+        type=int,
+        default=DEFAULT_ITERATIONS,
+        help="Number of nbody advance() iterations "
+             "(default: %s)" % DEFAULT_ITERATIONS
+    )
+
+    runner.argparser.add_argument(
+        "--reference",
+        type=str,
+        default=DEFAULT_REFERENCE,
+        help="nbody reference (default: %s)" % DEFAULT_REFERENCE
+    )
 
     args = runner.parse_args()
-    runner.bench_time_func('nbody_optimized', bench_nbody,
-                           args.reference, args.iterations)
+
+    reference_index = list(BODIES.keys()).index(args.reference)
+
+    runner.bench_time_func(
+        'nbody_optimized',
+        bench_nbody,
+        reference_index,
+        args.iterations
+    )
