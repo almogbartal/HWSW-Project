@@ -40,7 +40,7 @@ the chosen optimization:
   -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 44.76% total runtime in the baseline down to 11.17% in the optimized version.  
   -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
   -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
-  -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to $0.00% by switching to contiguous C-array buffer pointers.
+  -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to 0.00% by switching to contiguous C-array buffer pointers.
 
 Some metrics where the optimized version performed worse:
   -Page Faults: Increased from 117,757 to 385,005 due to LLVM dynamic code compilation and memory allocation during the JIT warmup phase.
