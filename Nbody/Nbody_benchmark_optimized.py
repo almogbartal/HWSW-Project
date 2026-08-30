@@ -1,26 +1,15 @@
 """
-N-body benchmark from the Computer Language Benchmarks Game.
-
-Optimized Pure-Python version using hardware-level sqrt and local scope caching.
+N-body benchmark optimized with Numba (JIT compilation).
+Eliminates Python interpreter overhead entirely.
 """
 
 import math
+import numpy as np
+import numba
 import pyperf
 
-__contact__ = "collinwinter@google.com (Collin Winter)"
 DEFAULT_ITERATIONS = 20000
 DEFAULT_REFERENCE = 'sun'
-
-
-def combinations(l):
-    """Pure-Python implementation of itertools.combinations(l, 2)."""
-    result = []
-    for x in range(len(l) - 1):
-        ls = l[x + 1:]
-        for y in ls:
-            result.append((l[x], y))
-    return result
-
 
 PI = 3.14159265358979323
 SOLAR_MASS = 4 * PI * PI
@@ -62,71 +51,86 @@ BODIES = {
                 5.15138902046611451e-05 * SOLAR_MASS)}
 
 
-SYSTEM = list(BODIES.values())
-PAIRS = combinations(SYSTEM)
-
-
-def advance(dt, n, bodies=SYSTEM, pairs=PAIRS, sqrt=math.sqrt):
+# ליבת החישוב המקומפלת לשפת מכונה (C-level execution)
+@numba.njit(fastmath=True)
+def _advance_jit(r, v, m, dt, n):
+    num_bodies = len(m)
     for _ in range(n):
-        for (r1, v1, m1), (r2, v2, m2) in pairs:
-            x1, y1, z1 = r1
-            x2, y2, z2 = r2
-            
-            dx = x1 - x2
-            dy = y1 - y2
-            dz = z1 - z2
-            
-            d2 = dx * dx + dy * dy + dz * dz
-            mag = dt / (d2 * sqrt(d2))
-            
-            b1m = m1 * mag
-            b2m = m2 * mag
-            
-            v1[0] -= dx * b2m
-            v1[1] -= dy * b2m
-            v1[2] -= dz * b2m
-            v2[0] += dx * b1m
-            v2[1] += dy * b1m
-            v2[2] += dz * b1m
-            
-        for r, (vx, vy, vz), _ in bodies:
-            r[0] += dt * vx
-            r[1] += dt * vy
-            r[2] += dt * vz
+        # O(n^2) לולאות זוגות רצות בזיכרון רציף ללא Overhead של פייתון
+        for i in range(num_bodies):
+            for j in range(i + 1, num_bodies):
+                dx = r[i, 0] - r[j, 0]
+                dy = r[i, 1] - r[j, 1]
+                dz = r[i, 2] - r[j, 2]
+
+                d2 = dx * dx + dy * dy + dz * dz
+                mag = dt / (d2 * math.sqrt(d2))
+
+                b1m = m[i] * mag
+                b2m = m[j] * mag
+
+                v[i, 0] -= dx * b2m
+                v[i, 1] -= dy * b2m
+                v[i, 2] -= dz * b2m
+                v[j, 0] += dx * b1m
+                v[j, 1] += dy * b1m
+                v[j, 2] += dz * b1m
+
+        for i in range(num_bodies):
+            r[i, 0] += dt * v[i, 0]
+            r[i, 1] += dt * v[i, 1]
+            r[i, 2] += dt * v[i, 2]
 
 
-def report_energy(bodies=SYSTEM, pairs=PAIRS, e=0.0, sqrt=math.sqrt):
-    for (r1, _, m1), (r2, _, m2) in pairs:
-        dx = r1[0] - r2[0]
-        dy = r1[1] - r2[1]
-        dz = r1[2] - r2[2]
-        e -= (m1 * m2) / sqrt(dx * dx + dy * dy + dz * dz)
-    for _, (vx, vy, vz), m in bodies:
-        e += m * (vx * vx + vy * vy + vz * vz) / 2.0
+@numba.njit(fastmath=True)
+def _report_energy_jit(r, v, m):
+    e = 0.0
+    num_bodies = len(m)
+    for i in range(num_bodies):
+        for j in range(i + 1, num_bodies):
+            dx = r[i, 0] - r[j, 0]
+            dy = r[i, 1] - r[j, 1]
+            dz = r[i, 2] - r[j, 2]
+            d = math.sqrt(dx * dx + dy * dy + dz * dz)
+            e -= (m[i] * m[j]) / d
+
+        vx = v[i, 0]
+        vy = v[i, 1]
+        vz = v[i, 2]
+        e += m[i] * (vx * vx + vy * vy + vz * vz) * 0.5
     return e
 
 
-def offset_momentum(ref, bodies=SYSTEM, px=0.0, py=0.0, pz=0.0):
-    for (_, [vx, vy, vz], m) in bodies:
-        px -= vx * m
-        py -= vy * m
-        pz -= vz * m
-    _, v, m = ref
-    v[0] = px / m
-    v[1] = py / m
-    v[2] = pz / m
+def offset_momentum(ref_idx, v, m):
+    px = np.sum(v[:, 0] * m)
+    py = np.sum(v[:, 1] * m)
+    pz = np.sum(v[:, 2] * m)
+    v[ref_idx, 0] = -px / m[ref_idx]
+    v[ref_idx, 1] = -py / m[ref_idx]
+    v[ref_idx, 2] = -pz / m[ref_idx]
 
 
 def bench_nbody(loops, reference, iterations):
-    offset_momentum(BODIES[reference])
+    keys = list(BODIES.keys())
+    ref_idx = keys.index(reference)
 
-    range_it = range(loops)
+    r_init = np.array([BODIES[k][0] for k in keys], dtype=np.float64)
+    v_init = np.array([BODIES[k][1] for k in keys], dtype=np.float64)
+    m_init = np.array([BODIES[k][2] for k in keys], dtype=np.float64)
+
+    offset_momentum(ref_idx, v_init, m_init)
+
+    # Warmup קומפילציה (כדי לא למדוד את זמן ה-JIT עצמו)
+    _advance_jit(r_init.copy(), v_init.copy(), m_init, 0.01, 1)
+    _report_energy_jit(r_init, v_init, m_init)
+
     t0 = pyperf.perf_counter()
-
-    for _ in range_it:
-        report_energy()
-        advance(0.01, iterations)
-        report_energy()
+    for _ in range(loops):
+        r = r_init.copy()
+        v = v_init.copy()
+        _report_energy_jit(r, v, m_init)
+        _advance_jit(r, v, m_init, 0.01, iterations)
+        _report_energy_jit(r, v, m_init)
 
     return pyperf.perf_counter() - t0
 
@@ -137,16 +141,13 @@ def add_cmdline_args(cmd, args):
 
 if __name__ == '__main__':
     runner = pyperf.Runner(add_cmdline_args=add_cmdline_args)
-    runner.metadata['description'] = "n-body benchmark"
+    runner.metadata['description'] = "Numba-optimized n-body benchmark"
     runner.argparser.add_argument("--iterations",
                                   type=int, default=DEFAULT_ITERATIONS,
-                                  help="Number of nbody advance() iterations "
-                                       "(default: %s)" % DEFAULT_ITERATIONS)
+                                  help="Number of nbody advance() iterations (default: %s)" % DEFAULT_ITERATIONS)
     runner.argparser.add_argument("--reference",
                                   type=str, default=DEFAULT_REFERENCE,
-                                  help="nbody reference (default: %s)"
-                                       % DEFAULT_REFERENCE)
+                                  help="nbody reference (default: %s)" % DEFAULT_REFERENCE)
 
     args = runner.parse_args()
-    runner.bench_time_func('nbody', bench_nbody,
-                           args.reference, args.iterations)
+    runner.bench_time_func('nbody', bench_nbody, args.reference, args.iterations)
