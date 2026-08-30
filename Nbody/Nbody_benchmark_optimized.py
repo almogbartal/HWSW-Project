@@ -150,4 +150,4 @@ if __name__ == '__main__':
                                   help="nbody reference (default: %s)" % DEFAULT_REFERENCE)
 
     args = runner.parse_args()
-    runner.bench_time_func('nbody', bench_nbody, args.reference, args.iterations)
+    runner.bench_time_func('nbody_optimized', bench_nbody, args.reference, args.iterations)
