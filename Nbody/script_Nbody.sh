@@ -9,24 +9,23 @@ echo -1 > /proc/sys/kernel/perf_event_paranoid
 
 # --- Environment setup & dependency installation ---
 rm -rf FlameGraph
-git clone https://github.com/brendangregg/FlameGraph FlameGraph > /dev/null 2>&1
+git clone https://github.com/brendangregg/FlameGraph FlameGraph
 
-# --- Benchmark execution (Baseline) ---
-perf record -F 999 -e cpu-clock -g -o "perf_baseline.data" python3 -m pyperformance run --bench nbody > perf_report_NBody.txt 2>/dev/null
+# --- Benchmark execution (using the working command) ---
+perf record -F 999 -e cpu-clock -g -o "perf_baseline.data" python3 -m pyperformance run --bench nbody
 
-perf report -i "perf_baseline.data" --stdio >> perf_report_NBody.txt 2>/dev/null
+# --- Flame graph and performance data generation ---
+perf report -i "perf_baseline.data" --stdio > perf_report_NBody.txt
 
 perf script -i "perf_baseline.data" \
     | FlameGraph/stackcollapse-perf.pl \
     | FlameGraph/flamegraph.pl --title "NBody - Baseline" \
-    > Nbody_flamegraph.html 2>/dev/null
+    > Nbody_flamegraph.html
 
 # --- Post-optimization benchmark execution ---
-perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 Nbody_benchmark_optimized.py > perf_report_NBody_optimized.txt 2>/dev/null
-
-perf report -i "perf_optimized.data" --stdio >> perf_report_NBody_optimized.txt 2>/dev/null
-
+perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 Nbody_benchmark_optimized.py
+perf report -i "perf_optimized.data" --stdio > perf_report_NBody_optimized.txt
 perf script -i "perf_optimized.data" \
     | FlameGraph/stackcollapse-perf.pl \
     | FlameGraph/flamegraph.pl --title "NBody - Optimized" \
-    > Nbody_optimized_flamegraph.html 2>/dev/null
+    > Nbody_optimized_flamegraph.html
