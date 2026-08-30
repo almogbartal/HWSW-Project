@@ -1,7 +1,5 @@
 #!/bin/bash
-# script_NBody.sh
-
-set -e
+# script_Nbody.sh
 
 # --- VM Permissions Fix ---
 echo 0 > /proc/sys/kernel/kptr_restrict
@@ -16,9 +14,9 @@ git clone https://github.com/brendangregg/FlameGraph FlameGraph > /dev/null 2>&1
 # ==========================================
 echo "=== Running Baseline Benchmark ==="
 
-# Record stack traces and extract ONLY the execution result line (ms)
+# Record stack traces and show benchmark time
 perf record -F 999 -e cpu-clock -g -o "perf_baseline.data" \
-  python3 -m pyperformance run --quiet --bench nbody 2>&1 | grep "nbody:"
+  python3 -m pyperformance run --quiet --bench nbody 2>&1 | grep "Mean" || true
 
 # Generate TXT report and FlameGraph
 perf report -i "perf_baseline.data" --stdio > perf_report_NBody.txt
@@ -36,9 +34,9 @@ cat perf_report_NBody.txt
 # ==========================================
 echo "=== Running Optimized Benchmark ==="
 
-# Record stack traces and extract ONLY the execution result line (ms)
+# Record stack traces and show benchmark time
 perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" \
-  python3 Nbody_benchmark_optimized.py 2>&1 | grep "nbody:"
+  python3 Nbody_benchmark_optimized.py 2>&1 | grep "Mean" || true
 
 # Generate TXT report and FlameGraph
 perf report -i "perf_optimized.data" --stdio > perf_report_NBody_optimized.txt
