@@ -29,15 +29,16 @@ which come from the repeated gravity calculations and coordinate updates.
 3.	Optimization
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
 -Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvments and sometimes ran even slower due to extra interpreter overhead.
-
 -Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Creating temporary arrays and switching between Python and C code overhead outweighed any vectorization benefits.
-
--JIT Compilation (Numba):  Just-In-Time compilation via numba was adopted as the final solution. 
+* Since the benchmark simulates a small system of only 5 celestial bodies, manual micro-optimizations or NumPy vectorization were not as meaningful, however these techniques might have more noticeable benefits in large-scale simulations with significantly higher body counts.
+the chosen optimization:
+-JIT Compilation (Numba): Just-In-Time compilation via numba was adopted as the final solution. 
  This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck.
- By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed bytecode interpretation and  object allocation overhead resulting in:
+ By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
+ resulting in:
   -Mean Execution Time: Dropped from 237 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
   -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 44.76% total runtime in the baseline down to 11.17% in the optimized version.  
-  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as calculations moved directly to hardware FPU registers.
+  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
   -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
   -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to $0.00% by switching to contiguous C-array buffer pointers.
 
