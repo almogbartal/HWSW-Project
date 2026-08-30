@@ -65,3 +65,9 @@ Some metrics where the optimized version performed worse:
 	- Performance: Replaces around 7-8 separate CPU instructions with 1 single cycle.
 	- Area: Very small design requiring only 3 hardware multipliers and a few adders.
 	- Power: Saves power by avoiding repetitive CPU instruction decoding and register lookups.
+
+5. Conclusion
+   Profiling the Nbody benchmark showed that Python interpreter overhead and repeated math operations were the primary bottlenecks.
+   Because the simulation includes only 5 bodies, pure Python micro-optimizations and NumPy vectorization failed to improve performance due to data conversion and interpreter overhead.
+   Switching to Numba JIT compilation solved this issue by generating native machine code, achieving a 76.2x speedup and completely removing object allocation and list indexing overheads.
+   Finally, our proposed SystemVerilog hardware unit targets the remaining math bottleneck by computing 3D distances in a single clock cycle, replacing multiple CPU instructions with minimal hardware area.
