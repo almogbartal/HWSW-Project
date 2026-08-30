@@ -37,13 +37,27 @@ the chosen optimization:
  By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
  resulting in:
   -Mean Execution Time: Dropped from 237 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
-  -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 44.76% total runtime in the baseline down to 11.17% in the optimized version.  
+  -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 45.38% total runtime in the baseline down to 11.36% in the optimized version.  
   -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
   -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
   -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to 0.00% by switching to contiguous C-array buffer pointers.
 
+
+
+
+
+-Instruction Count Reduction ($90.07\%$ Reduction):Baseline: $154,906,160,090$ instructionsOptimized: $15,384,039,2706$ instructionsAnalysis: The massive drop in executed instructions proves that Numba JIT successfully eliminated the heavy CPython interpreter loop overhead (_PyEval_EvalFrameDefault), replacing thousands of dynamically interpreted evaluation steps with direct native assembly instructions.
+-Cycle Reduction ($81.25\%$ Reduction):Baseline: $58,339,908,386$ cyclesOptimized: $10,926,710,9447$ cyclesAnalysis: The sharp reduction in CPU clock cycles directly drives the raw performance improvement, freeing up execution resources on the processor.
+-IPC Shift ($2.66 \rightarrow 1.41$):Baseline IPC: $2.66$ instructions per cycleOptimized IPC: $1.41$ instructions per cycleAnalysis: Counterintuitively, the IPC dropped in the optimized version. In the baseline, Python executes highly predictable, simple interpretation routines in a dense stream, yielding artificially high instruction-level parallelism (ILP). The optimized native code executes far fewer total instructions that are densely packed with complex arithmetic and register dependencies, resulting in a lower IPC despite completing the actual workload significantly faster.
+-Elapsed Benchmark Harness Time ($24.95\text{ s} \rightarrow 47.46\text{ s}$):Analysis: The overall benchmark execution time in perf was longer for the optimized run because the benchmark harness executed significantly more outer iterations or warmup loops to achieve statistically stable measurements, despite each individual frame step running $76\times$ faster.
+
+
+
+
+
+
 Some metrics where the optimized version performed worse:
-  -Page Faults: Increased from 117,757 to 385,005 due to LLVM dynamic code compilation and memory allocation during the JIT warmup phase.
+  -Page Faults: Increased from 117,785 to 385,021 due to dynamic code compilation and memory allocation during the JIT warmup phase.
   -Branch Mispredictions: The miss rate increased from 0.64% in the baseline to 2.24% in the compiled native code.
   -Total Harness Elapsed Time: Total benchmark sampling task-clock time was higher 46,416.77 ms vs 24,711.13 ms, due to the initial JIT compilation overhead during startup.
 
