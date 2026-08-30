@@ -8,3 +8,12 @@ This requires heavy 3D math (dot products, cross products, additions, scaling, a
 The Vector and Point classes carry three scalar floating-point attributes (x, y, z) to perform standard 3D arithmetic.
 Because these math operations run inside nested loops and constantly create new Vector/Point objects, we expect these loops and the Python object overhead to be the main bottleneck.
 
+2. Detecting Bottlenecks:
+The baseline benchmark executes with an average runtime of 802 ms per iteration (total profiling run took ~72.32 seconds with ~437.77 billion instructions and an IPC of 2.56).
+Based on the perf stats, perf report, and Flame Graph, the primary bottlenecks in the baseline are:
+- Python Interpreter Overhead:
+  The perf report and Flame Graph show that 42.37% of execution time is spent inside _PyEval_EvalFrameDefault. Almost half of the runtime goes directly to CPython bytecode evaluation and loop execution.
+- Object Creation and Attribute Handling:
+  The report shows direct overhead in float_dealloc (1.00%), PyObject_SetAttr (0.98%), and _PyFunction_Vectorcall (0.83%). The code continuously allocates and deallocates temporary Vector and Point objects for intermediate    3D math steps.
+- Scalar Arithmetic in Nested Loops:
+  Vector calculations (dot products, vector additions, scaling, and square roots) are executed purely as scalar operations inside deep pixel rendering loops instead of vectorized math.
