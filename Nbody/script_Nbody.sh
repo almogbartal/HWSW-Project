@@ -15,7 +15,8 @@ git clone https://github.com/brendangregg/FlameGraph FlameGraph
 perf record -F 999 -e cpu-clock -g -o "perf_baseline.data" python3 -m pyperformance run --bench nbody
 
 # --- Flame graph and performance data generation ---
-perf report -i "perf_baseline.data" --stdio > perf_report_NBody.txt
+perf stat -o perf_report_NBody.txt python3 -m pyperformance run --bench nbody
+perf report -i "perf_baseline.data" --stdio >> perf_report_NBody.txt
 
 perf script -i "perf_baseline.data" \
     | FlameGraph/stackcollapse-perf.pl \
@@ -24,7 +25,8 @@ perf script -i "perf_baseline.data" \
 
 # --- Post-optimization benchmark execution ---
 perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 Nbody_benchmark_optimized.py
-perf report -i "perf_optimized.data" --stdio > perf_report_NBody_optimized.txt
+perf stat -o perf_report_NBody_optimized.txt python3 Nbody_benchmark_optimized.py
+perf report -i "perf_optimized.data" --stdio >> perf_report_NBody_optimized.txt
 perf script -i "perf_optimized.data" \
     | FlameGraph/stackcollapse-perf.pl \
     | FlameGraph/flamegraph.pl --title "NBody - Optimized" \
