@@ -1,8 +1,10 @@
 1. Benchmark Analysis:
 The Raytrace benchmark simulates a raytracer that renders a 3D scene onto a 2D canvas (100x100 pixels).
 The scene includes multiple objects (spheres and a plane) and light sources.
-The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces) without external math libraries.
+The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces) without external math libraries.It uses standard modules like math for scalar calculations, array for pixel buffer storage, and pyperf for timing.
 
 The algorithm goes through every pixel, shoots rays from the camera, and calculates intersections with objects to compute color, shadows, and reflections.
 This requires heavy 3D math (dot products, cross products, additions, scaling, and square roots) for each ray and pixel.
+The Vector and Point classes carry three scalar floating-point attributes (x, y, z) to perform standard 3D arithmetic.
 Because these math operations run inside nested loops and constantly create new Vector/Point objects, we expect these loops and the Python object overhead to be the main bottleneck.
+
