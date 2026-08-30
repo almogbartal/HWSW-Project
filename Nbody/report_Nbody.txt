@@ -28,8 +28,14 @@ which come from the repeated gravity calculations and coordinate updates.
 	 
 3.	Optimization
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
--Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvments and sometimes ran even slower due to extra interpreter overhead.
+-Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal 
+ improvments and sometimes ran even slower due to extra interpreter overhead.
 
--Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Creating temporary arrays and switching between Python and C code overhead outweighed any vectorization benefits.
+-Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real 
+ improvement here and often ran slower than the baseline. Creating temporary arrays and switching
+ between Python and C code overhead outweighed any vectorization benefits.
 
--JIT Compilation (Numba):  Just-In-Time compilation via numba was adopted as the final solution. This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck .By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead, successfully dropping execution time from 237 ms to 3.11 ms.
+-JIT Compilation (Numba):  Just-In-Time compilation via numba was adopted as the final solution. 
+ This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck.
+ By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed 
+ bytecode interpretation and  object allocation overhead, successfully dropping execution time from 237 ms to 3.11 ms.
