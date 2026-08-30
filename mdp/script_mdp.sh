@@ -34,5 +34,5 @@ perf script -i "perf_baseline.data" \
     #perf script -i "perf_optimized.data" \
      #   | FlameGraph/stackcollapse-perf.pl \
       #  | FlameGraph/flamegraph.pl --title "MDP - Optimized" \
-     #   > mdp_optimized_flamegraph.html
-fi#
+       # > mdp_optimized_flamegraph.html
+fi
