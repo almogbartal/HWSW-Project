@@ -1,16 +1,32 @@
+"""
+N-body benchmark from the Computer Language Benchmarks Game.
+
+Optimized Pure-Python version using hardware-level sqrt and local scope caching.
+"""
+
+import math
 import pyperf
-import numpy as np
 
 __contact__ = "collinwinter@google.com (Collin Winter)"
 DEFAULT_ITERATIONS = 20000
 DEFAULT_REFERENCE = 'sun'
 
+
+def combinations(l):
+    """Pure-Python implementation of itertools.combinations(l, 2)."""
+    result = []
+    for x in range(len(l) - 1):
+        ls = l[x + 1:]
+        for y in ls:
+            result.append((l[x], y))
+    return result
+
+
 PI = 3.14159265358979323
 SOLAR_MASS = 4 * PI * PI
 DAYS_PER_YEAR = 365.24
 
-# Initial dictionary of bodies
-BODIES_INIT = {
+BODIES = {
     'sun': ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0], SOLAR_MASS),
 
     'jupiter': ([4.84143144246472090e+00,
@@ -45,81 +61,72 @@ BODIES_INIT = {
                  -9.51592254519715870e-05 * DAYS_PER_YEAR],
                 5.15138902046611451e-05 * SOLAR_MASS)}
 
-BODY_NAMES = list(BODIES_INIT.keys())
+
+SYSTEM = list(BODIES.values())
+PAIRS = combinations(SYSTEM)
 
 
-def get_system_arrays():
-    positions = np.array([BODIES_INIT[name][0] for name in BODY_NAMES], dtype=np.float64)
-    velocities = np.array([BODIES_INIT[name][1] for name in BODY_NAMES], dtype=np.float64)
-    masses = np.array([BODIES_INIT[name][2] for name in BODY_NAMES], dtype=np.float64)
-    return positions, velocities, masses
-
-
-def advance(dt, n, positions, velocities, masses):
-    num_bodies = len(masses)
-    # Prepare indices for upper/lower triangle interactions to avoid redundant calculations
-    i_indices, j_indices = np.triu_indices(num_bodies, k=1)
-
+def advance(dt, n, bodies=SYSTEM, pairs=PAIRS, sqrt=math.sqrt):
     for _ in range(n):
-        # Vectorized coordinate differences for all pairs at once
-        dx = positions[i_indices, 0] - positions[j_indices, 0]
-        dy = positions[i_indices, 1] - positions[j_indices, 1]
-        dz = positions[i_indices, 2] - positions[j_indices, 2]
-
-        dist_sq = dx * dx + dy * dy + dz * dz
-        mag = dt * (dist_sq ** (-1.5))
-
-        b1m = masses[i_indices] * mag
-        b2m = masses[j_indices] * mag
-
-        # Update velocities using vectorized operations
-        velocities[i_indices, 0] -= dx * b2m
-        velocities[i_indices, 1] -= dy * b2m
-        velocities[i_indices, 2] -= dz * b2m
-
-        velocities[j_indices, 0] += dx * b1m
-        velocities[j_indices, 1] += dy * b1m
-        velocities[j_indices, 2] += dz * b1m
-
-        # Update positions
-        positions += dt * velocities
-
-
-def report_energy(positions, velocities, masses):
-    num_bodies = len(masses)
-    i_idx, j_idx = np.triu_indices(num_bodies, k=1)
-    
-    dx = positions[i_idx, 0] - positions[j_idx, 0]
-    dy = positions[i_idx, 1] - positions[j_idx, 1]
-    dz = positions[i_idx, 2] - positions[j_idx, 2]
-    
-    potential = np.sum((masses[i_idx] * masses[j_idx]) / np.sqrt(dx * dx + dy * dy + dz * dz))
-    kinetic = 0.5 * np.sum(masses * np.sum(velocities ** 2, axis=1))
-    
-    return kinetic - potential
+        for (r1, v1, m1), (r2, v2, m2) in pairs:
+            x1, y1, z1 = r1
+            x2, y2, z2 = r2
+            
+            dx = x1 - x2
+            dy = y1 - y2
+            dz = z1 - z2
+            
+            d2 = dx * dx + dy * dy + dz * dz
+            mag = dt / (d2 * sqrt(d2))
+            
+            b1m = m1 * mag
+            b2m = m2 * mag
+            
+            v1[0] -= dx * b2m
+            v1[1] -= dy * b2m
+            v1[2] -= dz * b2m
+            v2[0] += dx * b1m
+            v2[1] += dy * b1m
+            v2[2] += dz * b1m
+            
+        for r, (vx, vy, vz), _ in bodies:
+            r[0] += dt * vx
+            r[1] += dt * vy
+            r[2] += dt * vz
 
 
-def offset_momentum(reference_name, positions, velocities, masses):
-    ref_idx = BODY_NAMES.index(reference_name)
-    px = np.sum(velocities[:, 0] * masses)
-    py = np.sum(velocities[:, 1] * masses)
-    pz = np.sum(velocities[:, 2] * masses)
-    
-    velocities[ref_idx, 0] = -px / masses[ref_idx]
-    velocities[ref_idx, 1] = -py / masses[ref_idx]
-    velocities[ref_idx, 2] = -pz / masses[ref_idx]
+def report_energy(bodies=SYSTEM, pairs=PAIRS, e=0.0, sqrt=math.sqrt):
+    for (r1, _, m1), (r2, _, m2) in pairs:
+        dx = r1[0] - r2[0]
+        dy = r1[1] - r2[1]
+        dz = r1[2] - r2[2]
+        e -= (m1 * m2) / sqrt(dx * dx + dy * dy + dz * dz)
+    for _, (vx, vy, vz), m in bodies:
+        e += m * (vx * vx + vy * vy + vz * vz) / 2.0
+    return e
+
+
+def offset_momentum(ref, bodies=SYSTEM, px=0.0, py=0.0, pz=0.0):
+    for (_, [vx, vy, vz], m) in bodies:
+        px -= vx * m
+        py -= vy * m
+        pz -= vz * m
+    _, v, m = ref
+    v[0] = px / m
+    v[1] = py / m
+    v[2] = pz / m
 
 
 def bench_nbody(loops, reference, iterations):
-    positions, velocities, masses = get_system_arrays()
-    offset_momentum(reference, positions, velocities, masses)
+    offset_momentum(BODIES[reference])
 
+    range_it = range(loops)
     t0 = pyperf.perf_counter()
 
-    for _ in range(loops):
-        report_energy(positions, velocities, masses)
-        advance(0.01, iterations, positions, velocities, masses)
-        report_energy(positions, velocities, masses)
+    for _ in range_it:
+        report_energy()
+        advance(0.01, iterations)
+        report_energy()
 
     return pyperf.perf_counter() - t0
 
@@ -130,7 +137,7 @@ def add_cmdline_args(cmd, args):
 
 if __name__ == '__main__':
     runner = pyperf.Runner(add_cmdline_args=add_cmdline_args)
-    runner.metadata['description'] = "Fully vectorized NumPy n-body benchmark"
+    runner.metadata['description'] = "n-body benchmark"
     runner.argparser.add_argument("--iterations",
                                   type=int, default=DEFAULT_ITERATIONS,
                                   help="Number of nbody advance() iterations "
@@ -141,5 +148,5 @@ if __name__ == '__main__':
                                        % DEFAULT_REFERENCE)
 
     args = runner.parse_args()
-    runner.bench_time_func('nbody_vectorized', bench_nbody,
+    runner.bench_time_func('nbody', bench_nbody,
                            args.reference, args.iterations)
