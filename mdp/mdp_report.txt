@@ -1,23 +1,6 @@
 1. Benchmark Analysis:
-The MDP (Markov Decision Process) benchmark simulates a turn-based battle game using value iteration to evaluate the optimal winning probability.
-The benchmark models game states, actions (like attacks and items), and probabilistic outcomes (such as critical hits and damage variations).
-
-The algorithm performs two main phases:
-- State-space graph construction: It builds the battle tree, explores state transitions using functions like _applyAction and getSuccessors, and performs a topological sort (topoSort) on all reachable states.
-- Value Iteration Loop: In the evaluate() method, it iteratively computes minimum and maximum winning probabilities (dmin and dmax) until they converge within a specified tolerance.
-
-Main expected bottlenecks in the baseline code:
-- Heavy use of the 'Fraction' class: Python's fractions.Fraction is used extensively for calculating probabilities and damage distributions (e.g., in getCritDist). Computing exact fractions requires calculating the greatest common divisor (GCD) on every operation, adding massive software overhead.
-- Redundant calculations in inner loops: In getDamages, the code loops through range(217, 256) (39 steps) to compute damage spreads repeatedly for identical battle states without caching.
-- Repeated function calls and dictionary lookups: Inside the while loop in evaluate(), self.getSuccessors(sp) is repeatedly called up to 4 times per state in each iteration to update dmin and dmax.
-- Complex nested tuple structures: States are represented by deep nested namedtuples (stats_t, fixeddata_t, halfstate_t), causing heavy hashing and dictionary lookup overhead in dmin, dmax, and successors.
-
-2. Detecting Bottlenecks:
-Based on the code structure and profiling (via perf and Flame Graphs), the primary bottlenecks in the baseline are:
-
-- Python Interpreter & Type Overhead:
-  The script spends a significant amount of runtime inside the CPython interpreter managing high-level objects, function frames, and dynamic type checks.
-- Fraction Arithmetic & Math Operations:
-  Operations on fractions.Fraction generate substantial CPU overhead due to large integer allocations, conversions, and repeated GCD computations.
-- Redundant Tree Traversal & Lookups:
-  Calling getSuccessors() multiple times inside the convergence loop results in repetitive dictionary lookups and list iterations over the state graph.
+The MDP benchmark calculates the best chance to win a turn-based battle game.
+It builds a tree of all possible game states and actions (like attacks and items), and calculates damage and probabilities. 
+Then, it runs a loop to update the win probabilities until the values stop changing.
+The benchmark uses standard Python data structures (tuples, lists, and dicts) and uses the Fraction class to calculate exact probabilities.
+Because it repeats these probability and damage calculations in a loop across many states, we expect this loop and the Python object overhead to be the main bottleneck.
