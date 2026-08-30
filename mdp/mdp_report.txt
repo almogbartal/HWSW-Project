@@ -1,6 +1,0 @@
-1. Benchmark Analysis:
-The MDP benchmark calculates the best chance to win a turn-based battle game.
-It builds a tree of all possible game states and actions (like attacks and items), and calculates damage and probabilities. 
-Then, it runs a loop to update the win probabilities until the values stop changing.
-The benchmark uses standard Python data structures (tuples, lists, and dicts) and uses the Fraction class to calculate exact probabilities.
-Because it repeats these probability and damage calculations in a loop across many states, we expect this loop and the Python object overhead to be the main bottleneck.
