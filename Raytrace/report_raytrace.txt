@@ -9,7 +9,7 @@ The Vector and Point classes carry three scalar floating-point attributes (x, y,
 Because these math operations run inside nested loops and constantly create new Vector/Point objects, we expect these loops and the Python object overhead to be the main bottleneck.
 
 2. Detecting Bottlenecks:
-The baseline benchmark executes with an average runtime of 802 ms per iteration (total profiling run took ~72.32 seconds with ~437.77 billion instructions and an IPC of 2.56).
+The baseline benchmark executes with an average runtime of 799 ms per iteration (total profiling run took ~72.32 seconds with ~437.77 billion instructions and an IPC of 2.56).
 Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks in the baseline are:
 - Python Interpreter Overhead:
   The perf report and Flame Graph immediately point to the interpreter as the main issue. We can see that _PyEval_EvalFrameDefault consumes 42.37% of the total runtime (occupying a large portion of the Flame Graph with a wide base). This means almost half of the execution time is spent purely on CPython bytecode evaluation and loop handling inside Python's internal interpreter loop.
