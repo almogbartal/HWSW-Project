@@ -34,7 +34,7 @@ To reduce execution time in the N-body benchmark, three main approaches were eva
 the chosen optimization:
 -JIT Compilation (Numba): Just-In-Time compilation via numba was adopted as the final solution. 
  This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck.
- By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
+ By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
  resulting in:
   -Mean Execution Time: Dropped from 237 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
   -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 44.76% total runtime in the baseline down to 11.17% in the optimized version.  
