@@ -44,15 +44,15 @@ To reduce execution time in the N-body benchmark, three main approaches were eva
 
   -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 44.76% total runtime in the baseline down to 11.17% in the optimized version.  
 
-  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and       	         float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as calculations moved directly to hardware FPU registers.
+  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as calculations moved directly to hardware FPU registers.
 
-  -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped      from 5.12% in the baseline down to 0.00% in the optimized code.
+  -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
 
-  -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to $0.00% by switching to     contiguous C-array buffer pointers.
+  -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to $0.00% by switching to contiguous C-array buffer pointers.
 
 Some metrics where the optimized version performed worse were s following:
   -Page Faults: Increased from 117,757 to 385,005 due to LLVM dynamic code compilation and memory allocation during the JIT warmup phase.
 
   -Branch Mispredictions: The miss rate increased from 0.64% in the baseline to 2.24% in the compiled native code.
 
-  -Total Harness Elapsed Time: Total benchmark sampling task-clock time was higher 46,416.77 ms vs 24,711.13 ms, due to the initial JIT              compilation overhead during startup.
+  -Total Harness Elapsed Time: Total benchmark sampling task-clock time was higher 46,416.77 ms vs 24,711.13 ms, due to the initial JIT compilation overhead during startup.
