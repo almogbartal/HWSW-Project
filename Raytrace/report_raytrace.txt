@@ -25,18 +25,10 @@ Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks
   - Overall, calculations are executed purely as scalar operations inside deep pixel loops instead of efficient vectorized arithmetic.
 
 3. Optimization
-
-To reduce execution time in the Raytrace benchmark, we evaluated the primary bottlenecks:
-- Python OOP and Memory Management Overhead: The baseline constantly creates and destroys objects (Vector, Point, Ray) and dynamic dictionaries (__dict__), causing heavy interpreter and allocation churn[cite: 1].
-- Redundant Math Calculations: Repeatedly calculating values like radius * radius inside deep loops added unnecessary floating-point operations[cite: 1].
-
-The chosen optimization:
-- Class Memory Layout (__slots__): Added __slots__ to all classes (Vector, Point, Ray, Sphere, Halfspace, Scene, Canvas, SimpleSurface, and CheckerboardSurface) to eliminate dynamic __dict__ allocations and speed up attribute access[cite: 1].
-- Invariant Pre-computation: Pre-calculated self.radius_sq = radius * radius inside Sphere.__init__ to avoid repeated multiplications during ray-sphere intersection tests[cite: 1].
-- Math Inlining in Vector Normalization: Replaced Vector.magnitude() division with direct inverse square root multiplication (1.0 / math.sqrt(...)) in Vector.normalized().
-- Math Inlining in Vector Reflection: Inlined the dot product calculation directly inside Vector.reflectThrough() using coordinate arithmetic.
-- Math Inlining in Halfspace Intersections: Inlined the ray vector and normal dot product directly inside Halfspace.intersectionTime().
-- Math Inlining in Point Ray Propagation: Simplified Ray.pointAtTime(t) into direct coordinate scaling and additions.
+we chose to adjust these following changes:
+- Adding __slots__ to classes: We used __slots__ on classes like Vector, Point, Ray, and Sphere so Python avoids creating heavy internal dictionaries for each object, making object creation and attribute lookups much faster.
+- Pre-calculating constant math: In the Sphere class, we calculated self.radius_sq = radius * radius once inside __init__, saving repeated multiplications during intersection checks.
+- Writing math calculations directly (Inlining): Instead of calling helper methods and creating temporary Vector objects for basic steps, we wrote the coordinate math (x, y, z) directly inside methods like Vector.normalized(), Vector.reflectThrough(), and Halfspace.intersectionTime().
 
 These modifications resulted in:
 - Mean Execution Time: Dropped from 799 ms to 449 ms (~43.8% runtime reduction, 1.78x speedup).
@@ -47,6 +39,6 @@ These modifications resulted in:
 - Stable IPC: Remained steady at 2.58 (baseline: 2.57).
 
 Remaining Bottlenecks and Trade-offs:
-- Interpreter Overhead (_PyEval_EvalFrameDefault): Still consumes 43.38% of the optimized runtime (baseline: 42.25%), because the code remains in pure Python without native compilation[cite: 1, 2].
+- Interpreter Overhead (_PyEval_EvalFrameDefault): Still consumes 43.38% of the optimized runtime (baseline: 42.25%), because the code remains in pure Python without native compilation.
 - Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%.
 - Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec relative to the shorter elapsed time.
