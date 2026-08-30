@@ -27,16 +27,9 @@ which come from the repeated gravity calculations and coordinate updates.
 	that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
 	 
 3.	Optimization
-we rewrote the code using NumPy arrays and vectorization to completely eliminate slow Python loops. Instead of iterating through
-planet pairs one by one, we packed all the positions, velocities, and masses into flat, contiguous blocks of memory.
-we broke it down into three concepts:
+To reduce execution time in the N-body benchmark, three main approaches were evaluated:
+-Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvments and sometimes ran even slower due to extra interpreter overhead.
 
- -Contiguous Memory Layout: Standard Python lists are arrays of pointers scattered across RAM,forcing the CPU to waste time chasing pointers.
-  NumPy stores data sequentially in continuous memory blocks, allowing the CPU to pre-fetch data.
+-Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Creating temporary arrays and switching between Python and C code overhead outweighed any vectorization benefits.
 
- -Vectorized Operations and Indexing: Instead of cusing slow 'for' loops, we used np.triu_indices to grab all planet pairs at once.
-  This enables us to calculate coordinate differences and velocity updates for all arrays at once in a single operation.
-
- -C Level Execution: Even though the code is written in Python, the heavy math is offloaded to pre-compiled C libraries running inside NumPy.
-  This completely skips the slow Python interpreter (PyEval_EvalFrameDefault) and stops the creation of temporary heap objects (float_dealloc)
-	 
+-JIT Compilation (Numba):  Just-In-Time compilation via numba was adopted as the final solution. This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck .By compiling the O(n^2) interaction loops directly into native low-level VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead, successfully dropping execution time from 237 ms to 3.11 ms.
