@@ -24,10 +24,10 @@ perf script -i "perf_baseline.data" \
     > raytrace_flamegraph.html
 
 # --- Post-optimization benchmark execution ---
-#perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 raytrace_benchmark_optimized.py
-#perf stat -o perf_report_raytrace_optimized.txt python3 raytrace_benchmark_optimized.py
-#perf report -i "perf_optimized.data" --stdio >> perf_report_raytrace_optimized.txt
-#perf script -i "perf_optimized.data" \
- #   | FlameGraph/stackcollapse-perf.pl \
-  #  | FlameGraph/flamegraph.pl --title "Raytrace - Optimized" \
-   # > raytrace_optimized_flamegraph.html
+perf record -F 999 -e cpu-clock -g -o "perf_optimized.data" python3 raytrace_benchmark_optimized.py
+perf stat -o perf_report_raytrace_optimized.txt python3 raytrace_benchmark_optimized.py
+perf report -i "perf_optimized.data" --stdio >> perf_report_raytrace_optimized.txt
+perf script -i "perf_optimized.data" \
+    | FlameGraph/stackcollapse-perf.pl \
+    | FlameGraph/flamegraph.pl --title "Raytrace - Optimized" \
+    > raytrace_optimized_flamegraph.html
