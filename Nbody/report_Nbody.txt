@@ -48,12 +48,12 @@ Some metrics where the optimized version performed worse:
   -Total Harness Elapsed Time: Total benchmark sampling task-clock time was higher 46,416.77 ms vs 24,711.13 ms, due to the initial JIT compilation overhead during startup.
 
  4. Hardware acceleration:
-	The biggest bottleneck in N-body is calculating the distance between pairs of bodies (o(n^2)).
+	The biggest bottleneck in N-body is calculating the distance between pairs of bodies O(n^2).
 	In Python, the calculation is split into many separate steps: subtracting x, subtracting y, subtracting z, squaring each one, and adding them up.
 	This creates a lot of instruction overhead on the CPU.
 	We want a single hardware block that does this entire calculation at once in parallel.
 
-	We implemented a dedicated hardware unit in SystemVerilog, which takes the (x, y, z) coordinates of two bodies and calculates the distance between then in a single clock cycle.
+	We implemented a dedicated hardware unit in SystemVerilog, which takes the (x, y, z) coordinates of two bodies and calculates the distance between them in a single clock cycle.
 	Inputs: 3D coordinates of Body 1 (x1, y1, z1) and Body 2 (x2, y2, z2), clock, and reset.
 	Output: The squared distance r2_out.
 
