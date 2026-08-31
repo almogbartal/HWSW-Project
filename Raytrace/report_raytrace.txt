@@ -44,3 +44,20 @@ Remaining Bottlenecks and Trade-offs:
 - Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%. The miss rate is calculated as `Mispredicted Branches / Total Branches`. The optimized code removed a lot of simple, predictable code,           which significantly lowered the total branch count (the denominator). Because the denominator shrank while the small number of tricky branches stayed the same, the resulting percentage went up slightly.
 - Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec. The total count actually dropped from 2,327 down to 1,570, but dividing by a much shorter total runtime (40.6s vs 72.1s) makes the per-        second rate look higher.
 
+4. Hardware acceleration:
+The biggest bottleneck in Raytrace is calculating ray-sphere intersections for every ray and pixel.
+In Python, this is split into many separate steps: subtracting 3D vectors, calculating multiple dot products, squaring values, and evaluating the discriminant formula.
+This creates a lot of instruction overhead on the CPU.
+We want a single hardware block that does this entire calculation at once in parallel.
+We implemented a  hardware unit in SystemVerilog, which takes the ray and sphere parameters and checks the intersection in a single clock cycle.
+Inputs: Ray origin (x, y, z), ray direction (x, y, z), sphere center (x, y, z), and radius_sq.
+Outputs: v_dot_d_out, discriminant (disc_out), and hit_out flag.
+The unit works as a single instruction on the CPU. Instead of software running multiple math instructions, it calls one instruction that sends the coordinates to our hardware block and gets the intersection result back immediately.
+
+The expected improvements:
+- Performance: Replaces around 15-20 separate CPU instructions with 1 single cycle.
+- Area: Small design using a few parallel multipliers and adders.
+- Power: Saves power by avoiding repetitive CPU instruction decoding and temporary object allocations.
+
+
+
