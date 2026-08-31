@@ -1,7 +1,8 @@
 1. Benchmark Analysis:
-The Raytrace benchmark simulates a raytracer that renders a 3D scene onto a 2D canvas (100x100 pixels).
+The benchmark simulates a raytracer that generates a 3D scene onto a 2D canvas (100x100 pixels).
 The scene includes multiple objects (spheres and a plane) and light sources.
-The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces) without external math libraries.It uses standard modules like math for scalar calculations, array for pixel buffer storage, and pyperf for timing.
+The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces). 
+It uses standard modules like math for calculations, array for pixel buffer storage, and pyperf for timing.
 
 The algorithm goes through every pixel, shoots rays from the camera, and calculates intersections with objects to compute color, shadows, and reflections.
 This requires heavy 3D math (dot products, cross products, additions, scaling, and square roots) for each ray and pixel.
@@ -9,16 +10,15 @@ The Vector and Point classes carry three scalar floating-point attributes (x, y,
 Because these math operations run inside nested loops and constantly create new Vector/Point objects, we expect these loops and the Python object overhead to be the main bottleneck.
 
 2. Detecting Bottlenecks:
-The baseline benchmark executes with an average runtime of 799 ms per iteration (total profiling run took ~72.32 seconds with ~437.77 billion instructions and an IPC of 2.56).
 Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks in the baseline are:
 - Python Interpreter Overhead:
-  The perf report and Flame Graph immediately point to the interpreter as the main issue. We can see that _PyEval_EvalFrameDefault consumes 42.37% of the total runtime (occupying a large portion of the Flame Graph with a wide base). This means almost half of the execution time is spent purely on CPython bytecode evaluation and loop handling inside Python's internal interpreter loop.
+ We can see in perf that _PyEval_EvalFrameDefault consumes 42.37% of the total runtime, and also in the flamegraph, occupying a large portion with a wide base. This means almost half of the execution time is spent on CPython bytecode evaluation and loop handling inside Python's internal interpreter loop.
 - Object Creation and Attribute Handling:
   The perf report shows significant overhead from class and function management:
     - PyObject_SetAttr (0.98%)
     - _PyFunction_Vectorcall (0.83%)
     - _PyEval_MakeFrameVector (0.55%)
-  This overhead stems directly from the OOP structure, where instances of Vector, Point, and Ray are continuously instantiated, populated with attributes, and called for every single pixel and light calculation.
+  This overhead is caused by the OOP structure, where instances of Vector, Point, and Ray are continuously made and called for every single pixel and light calculation.
 - Memory Management and Scalar Math:
   - Frequent object memory management overhead shown by float_dealloc (1.00%), caused by Python constantly allocating and destroying temporary float objects during intermediate 3D math steps (dot products, cross products, and vector additions).
   - Iterator and collection lookups like listiter_next (0.51%), caused by repeatedly iterating over lists of scene objects and light points to test ray-object intersections.
