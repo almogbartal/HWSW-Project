@@ -41,6 +41,6 @@ These modifications resulted in:
 
 Remaining Bottlenecks and Trade-offs:
 - Interpreter Overhead (_PyEval_EvalFrameDefault): Still consumes 43.38% of the optimized runtime (baseline: 42.25%), because the code remains in pure Python without native compilation.
-- Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%. 
+- Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%. The miss rate is calculated as `Mispredicted Branches / Total Branches`. The optimized code removed a lot of simple, predictable code,           which significantly lowered the total branch count (the denominator). Because the denominator shrank while the small number of tricky branches stayed the same, the resulting percentage went up slightly.
 - Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec. The total count actually dropped from 2,327 down to 1,570, but dividing by a much shorter total runtime (40.6s vs 72.1s) makes the per-        second rate look higher.
-- Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec relative to the shorter elapsed time.
+
