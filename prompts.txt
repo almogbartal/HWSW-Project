@@ -1,0 +1,37 @@
+Main prompts:
+
+# Prompt to make Shell Scripts:
+"i added the bash script from my previous assignment that executes benchmarks and generates flamegraphs and perf stat outputs. 
+please create a similar script for Nbody and raytrace benchmarks. 
+make sure to use:
+`perf record -F 999 -g -- python3-dbg -m pyperformance run --bench <benchmark_name>`
+and
+`perf report --stdio > perf_report.txt`"
+
+# Prompt for understanding the original benchmark:
+"Help me break down this code: what is it doing, how does it implement it,
+and what are the main math operations and objects that could slow it down?"
+
+# Prompts for trying to implement optimizations:
+"I want to optimize the code. let's try flatten the data structures, vectorize with numpy and cut down the math calculations in the loop to get better performance. will it help? suggest 
+ways you think will work better that i havent suggested yet"
+"why did the optimization gave worse results than the original one, can you explain the results in the perf and flamegraph and why it happened? what can i do else?"
+"ok, lets try it, but first can you explain what is JIT (numba) and why it would work"
+
+# Prompts for Hardware Accelerators:
+"now i want to make a hardware accelerator, take the most significant or repeated calculation in the code, and make it a single instruction using system verilog. i want the whole code
+and then an explanation that describes the internal logic and operation of the accelerator, including the inputs and outputs "
+
+
+** we used gemini to guide us through the analysis of this project: to help us write the code, examine the results and write the reports. 
+we didn't take his advice and code blindly, we challenged it and questioned its answeres, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
+also, we actively insisted on understanding the reasoning behind its answers.
+
+
+
+
+
+
+
+
+
