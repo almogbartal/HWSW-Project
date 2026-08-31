@@ -1,7 +1,8 @@
 # HWSW-Project
+# Benchmarks Optimization: N-Body & Raytracer
+This repository documents the process of optimizing two distinct Python benchmarks: **N-Body Simulation** (nbody) and a **3D Raytracer** (raytracer). The project demonstrates how to identify performance bottlenecks using Linux profiling tools, implement targeted software optimizations, and evaluate a SystemVerilog hardware accelerator to bypass Python constraints.
 
-
-Project structure:
+# Project structure:
 
 ```text
 HWSW-Project/
