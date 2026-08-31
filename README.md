@@ -61,7 +61,7 @@ HWSW-Project/
 
 ## 1. Clone the Repository
 ```bash
-git clone [https://github.com/almogbartal/HWSW-Project.git](https://github.com/almogbartal/HWSW-Project.git)
+git clone https://github.com/almogbartal/HWSW-Project.git
 cd HWSW-Project
 ```
 
