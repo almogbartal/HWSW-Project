@@ -59,5 +59,9 @@ The expected improvements:
 - Area: Small design using a few parallel multipliers and adders.
 - Power: Saves power by avoiding repetitive CPU instruction decoding and temporary object allocations.
 
-
+5. Conclusion:
+Profiling the Raytrace benchmark showed that object allocation, dynamic attribute lookups, and repeated 3D math inside deep pixel loops were the primary bottlenecks.
+Applying pure Python optimizations, using slots, pre-computing invariant values, and inlining vector math, reduced instructions and CPU cycles by ~43%, achieving a 1.78x speedup.
+However, because the code remained in pure Python without native compilation, the interpreter evaluation loop (_PyEval_EvalFrameDefault) still dominated the execution time (~43%).
+Finally, our proposed SystemVerilog hardware unit targets the core ray-sphere intersection bottleneck by computing vector math and the discriminant in a single clock cycle, replacing multiple CPU instructions with minimal hardware area.
 
