@@ -1,7 +1,9 @@
 # HWSW-Project
 
 
-#Project structure
+Project structure:
+
+```text
 HWSW-Project/
 ├── Nbody/
 │   ├── Nbody_benchmark.py
@@ -27,3 +29,4 @@ HWSW-Project/
 │   └── report_raytrace.pdf
 ├── prompts.txt
 └── README.md
+```
