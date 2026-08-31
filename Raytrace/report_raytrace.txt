@@ -29,7 +29,7 @@ Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks
 We chose to make the following changes:
 - Adding slots to classes: We used slots on classes like Vector, Point, Ray, and Sphere so Python avoids creating heavy internal dictionaries for each object, making object creation and attribute lookups much faster.
 - Pre-calculating constant math: In the original implementation, the constant expression self.radius * self.radius was re-evaluated inside intersectionTime() during every intersection check.
-  In a 100x100 frame there are over 100,000 sphere tests, so we calclulated self.radius_sq once in init function, and saved the constant result to avoid many repeated floating-point calculations.
+  In a 100x100 frame there are over 100,000 sphere tests, so we calculated self.radius_sq once in init function, and saved the constant result to avoid many repeated floating-point calculations.
 - Writing math calculations directly: Instead of calling helper methods and creating temporary Vector objects for basic steps, we wrote the coordinate math (x, y, z) directly inside methods like Vector.normalized(),         Vector.reflectThrough(), and Halfspace.intersectionTime().
 
 These modifications resulted in:
