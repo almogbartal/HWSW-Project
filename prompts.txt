@@ -24,7 +24,7 @@ and then an explanation that describes the internal logic and operation of the a
 
 
 ** we used gemini to guide us through the analysis of this project: to help us write the code, examine the results and write the reports. 
-we didn't take his advice and code blindly, we challenged it and questioned its answeres, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
+we didn't take its advice and code blindly, we challenged it and questioned its answeres, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
 also, we actively insisted on understanding the reasoning behind its answers.
 
 
