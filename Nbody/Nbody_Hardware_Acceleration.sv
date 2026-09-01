@@ -9,7 +9,7 @@ module nbody_dist_sq_unit #(
     // 3D coordinates for body 1 and body 2
     input  logic signed [DATA_WIDTH-1:0] x1, y1, z1,
     input  logic signed [DATA_WIDTH-1:0] x2, y2, z2,
-    output logic signed [DATA_WIDTH-1:0] r2_out,
+    output logic signed [DATA_WIDTH-1:0] r_out,
     output logic                   valid_out
 );
 
@@ -17,8 +17,10 @@ module nbody_dist_sq_unit #(
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            dx <= '0; dy <= '0; dz <= '0;
-            r2_out <= '0;
+            dx <= '0;
+            dy <= '0;
+            dz <= '0;
+            r_out <= '0;
             valid_out <= 1'b0;
         end else begin
             valid_out <= valid_in;
@@ -27,7 +29,7 @@ module nbody_dist_sq_unit #(
                 dy <= y1 - y2;
                 dz <= z1 - z2;
                 // Compute Euclidean distance squared
-                r2_out <= (dx * dx) + (dy * dy) + (dz * dz);
+                r_out <= (dx * dx) + (dy * dy) + (dz * dz);
             end
         end
     end
