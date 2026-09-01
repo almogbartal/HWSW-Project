@@ -99,4 +99,4 @@ cd ..
 All generated outputs, reports, and visual graphs can be inspected directly inside each benchmark's directory:
 * **Perf Reports:** `perf_report_<benchmark>.txt` and `perf_report_<benchmark>_optimized.txt` for detailed hardware counters and symbol overheads.
 * **Flame Graphs:** Open `*_flamegraph.html` files directly in any web browser to explore interactive CPU execution call stacks.
-* **Full Documentation:** Refer to `report_<benchmark>.pdf` (or `.txt`) for the full analysis, optimization breakdown, and hardware unit architecture.
+* **Full Documentation:** Refer to `report_<benchmark>.pdf` (or `.txt`) for the full analysis, optimization breakdown, and hardware unit architecture with a specific focus on pictures, block diagrams, and code snippets.
