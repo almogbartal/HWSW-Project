@@ -1,7 +1,7 @@
 1. Benchmark Analysis:
 The benchmark simulates a raytracer that generates a 3D scene onto a 2D canvas (100x100 pixels).
 The scene includes multiple objects (spheres and a plane) and light sources.
-The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces). 
+The benchmark uses pure Python and basic OOP (classes for Vector, Point, Ray, Sphere, and surfaces).
 It uses standard modules like math for calculations, array for pixel buffer storage, and pyperf for timing.
 
 The algorithm goes through every pixel, shoots rays from the camera, and calculates intersections with objects to compute color, shadows, and reflections.
@@ -12,7 +12,7 @@ Because these math operations run inside nested loops and constantly create new 
 2. Detecting Bottlenecks:
 Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks in the baseline are:
 - Python Interpreter Overhead:
-  The main interpreter evaluation loop (_PyEval_EvalFrameDefault) consumes 43.10% of the runtime. The Flame Graph shows a very wide base, meaning almost half of the runtime is spent on evaluating bytecode and running loop   logic inside Python.
+  The main interpreter evaluation loop (_PyEval_EvalFrameDefault) consumes 43.10% of the runtime. The Flame Graph shows a very wide base, meaning almost half of the runtime is spent on evaluating bytecode and running loop logic inside Python.
 - Object Creation and Attribute Handling:
   The perf report reveals that managing classes and calling methods takes a large portion of execution time:
   - _PyObject_GetMethod (4.44%): Looking up methods on objects during raytracing steps.
@@ -30,7 +30,7 @@ We chose to make the following changes:
 - Adding slots to classes: We used slots on classes like Vector, Point, Ray, and Sphere so Python avoids creating heavy internal dictionaries for each object, making object creation and attribute lookups much faster.
 - Pre-calculating constant math: In the original implementation, the constant expression self.radius * self.radius was re-evaluated inside intersectionTime() during every intersection check.
   In a 100x100 frame there are over 100,000 sphere tests, so we calculated self.radius_sq once in init function, and saved the constant result to avoid many repeated floating-point calculations.
-- Writing math calculations directly: Instead of calling helper methods and creating temporary Vector objects for basic steps, we wrote the coordinate math (x, y, z) directly inside methods like Vector.normalized(),         Vector.reflectThrough(), and Halfspace.intersectionTime().
+- Writing math calculations directly: Instead of calling helper methods and creating temporary Vector objects for basic steps, we wrote the coordinate math (x, y, z) directly inside methods like Vector.normalized(), Vector.reflectThrough(), and Halfspace.intersectionTime().
 
 These modifications resulted in:
 - Mean Execution Time: Dropped from 799 ms to 449 ms (~43.8% runtime reduction, 1.78x speedup).
@@ -41,8 +41,8 @@ These modifications resulted in:
 
 Remaining Bottlenecks and Trade-offs:
 - Interpreter Overhead (_PyEval_EvalFrameDefault): Still consumes 43.38% of the optimized runtime (baseline: 42.25%), because the code remains in pure Python without native compilation.
-- Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%. The miss rate is calculated as `Mispredicted Branches / Total Branches`. The optimized code removed a lot of simple, predictable code,           which significantly lowered the total branch count (the denominator). Because the denominator shrank while the small number of tricky branches stayed the same, the resulting percentage went up slightly.
-- Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec. The total count actually dropped from 2,327 down to 1,570, but dividing by a much shorter total runtime (40.6s vs 72.1s) makes the per-        second rate look higher.
+- Branch Mispredictions: The miss rate slightly increased from 0.40% to 0.48%. The miss rate is calculated as `Mispredicted Branches / Total Branches`. The optimized code removed a lot of simple, predictable code, which significantly lowered the total branch count (the denominator). Because the denominator shrank while the small number of tricky branches stayed the same, the resulting percentage went up slightly.
+- Context Switches: The rate slightly increased from 32.370 /sec to 38.793 /sec. The total count actually dropped from 2,327 down to 1,570, but dividing by a much shorter total runtime (40.6s vs 72.1s) makes the per-second rate look higher.
 
 4. Hardware acceleration:
 The biggest bottleneck in Raytrace is calculating ray-sphere intersections for every ray and pixel.
@@ -50,7 +50,7 @@ In Python, this is split into many separate steps: subtracting 3D vectors, calcu
 This creates a lot of instruction overhead on the CPU.
 We want a single hardware block that does this entire calculation at once in parallel.
 
-We implemented a  hardware unit in SystemVerilog, which takes the ray and sphere parameters and checks the intersection in a single clock cycle.
+We implemented a hardware unit in SystemVerilog, which takes the ray and sphere parameters and checks the intersection in a single clock cycle.
 
 Inputs and Outputs:
 - clk, rst_n: System clock and active-low reset.
@@ -64,7 +64,7 @@ Inputs and Outputs:
 - valid_in / valid_out: 1-bit control signals for data readiness.
 
 Hardware / Software Interface & Integration:
-- The unit is designed to work as an instruction extension directly inside the CPU pipeline, or connected via a standard memory-mapped bus (like AXI). 
+- The unit is designed to work as an instruction extension directly inside the CPU pipeline, or connected via a standard memory-mapped bus (like AXI).
 - Instead of the CPU executing multiple vector math operations and branches, the software triggers this single hardware instruction, passes ray/sphere vectors via registers, and receives the discriminant and hit flag immediately.
 - Software Modifications: The Python `Sphere.intersectionTime` method offloads calculation via a C-extension wrapper that passes vector values directly to the hardware unit, bypassing temporary `Vector` object allocations and interpreter overhead.
 
@@ -73,9 +73,8 @@ The expected improvements:
 - Area: Small design using a few parallel multipliers and adders.
 - Power: Saves power by avoiding repetitive CPU instruction decoding and temporary object allocations.
 
-5. Conclusion:
+5. Conclusions:
 Profiling the Raytrace benchmark showed that object allocation, dynamic attribute lookups, and repeated 3D math inside deep pixel loops were the primary bottlenecks.
 Applying pure Python optimizations, using slots, pre-computing invariant values, and inlining vector math, reduced instructions and CPU cycles by ~43%, achieving a 1.78x speedup.
 However, because the code remained in pure Python without native compilation, the interpreter evaluation loop (_PyEval_EvalFrameDefault) still dominated the execution time (~43%).
 Finally, our proposed SystemVerilog hardware unit targets the core ray-sphere intersection bottleneck by computing vector math and the discriminant in a single clock cycle, replacing multiple CPU instructions with minimal hardware area.
-
