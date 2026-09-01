@@ -10,20 +10,20 @@ In addition, for every iteration, the loop does sequential floating-point math (
 
 2. Detecting Bottlenecks
 As we can see, the perf report and the Flame Graph immediately point to the same major issue: Python's interpreter overhead.
-In the perf report, we can see that _PyEval_EvalFrameDefault consumes 44.76% of the total runtime.
+In the perf report, we can see that _PyEval_EvalFrameDefault consumes 45.42% of the total runtime.
 In the Flame Graph, we can see it, as _PyEval_EvalFrameDefault occupies a large portion of the graph (with a wide base and high stack).
 Both of these results make it clear that the script spends most of its execution runtime inside Python's internal interpreter loop, making the interpreter itself the main bottleneck.
    
 In addition, the perf report reveals more bottlenecks:
 -floating-point operations:
-	- float_mul (6.18%)
-	- float_sub (3.01%)
-	- float_add (3.00%)
+	- float_mul (5.76%)
+	- float_sub (2.74%)
+	- float_add (2.69%)
 which come from the repeated gravity calculations and coordinate updates.
-- frequent object memory management overhead shown by float_dealloc (5.12%) that is caused by python constantly creating and destroying temporary float objects during calculations.
+- frequent object memory management overhead shown by float_dealloc (4.86%) that is caused by python constantly creating and destroying temporary float objects during calculations.
    - continuous list modifications or lookups like:
-     - list_ass_subscript (3.95%)
-	 - list_subscript (2.73%)
+     - list_ass_subscript (4.06%)
+	 - list_subscript (2.5%)
 	that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
 	 
 3.	Optimization
@@ -36,13 +36,13 @@ the chosen optimization:
  This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck.
  By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
  resulting in:
-  -Mean Execution Time: Dropped from 237 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
-  -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 45.38% total runtime in the baseline down to 11.36% in the optimized version.  
-  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (6.18%), float_sub (3.01%), and float_add (3.00 %), which totaled 12.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
+  -Mean Execution Time: Dropped from 238 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
+  -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 45.42% total runtime in the baseline down to 11.36% in the optimized version.  
+  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (5.76%), float_sub (2.74%), and float_add (2.69 %), which totaled 11.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
   -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
   -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to 0.00% by switching to contiguous C-array buffer pointers.
-  -Instruction Count Reduction (90.07% Reduction - Baseline: 154,906,160,090 instructions, Optimized: 15,384,039,270 instructions): the massive drop in executed instructions proves that Numba JIT successfully eliminated     the heavy CPython interpreter loop overhead (_PyEval_EvalFrameDefault), replacing thousands of dynamically interpreted evaluation steps with direct native assembly instructions.
-  -Cycle Reduction (81.25% Reduction - Baseline: 58,339,908,386 cycles, Optimized: 10,926,710,944 cycles): the sharp reduction in CPU clock cycles directly drives the raw performance improvement, freeing up execution        resources on the processor.
+  -Instruction Count Reduction ( Baseline: 154,906,160,090 instructions, Optimized: 153,824,516,534       instructions): the massive drop in executed instructions proves that Numba JIT successfully eliminated     the heavy CPython interpreter loop overhead (_PyEval_EvalFrameDefault), replacing thousands of dynamically interpreted evaluation steps with direct native assembly instructions.
+  -Cycle Reduction (81.25% Reduction - Baseline: 58,339,908,386 cycles, Optimized: 10,918,571,923 cycles): the sharp reduction in CPU clock cycles directly drives the raw performance improvement, freeing up execution        resources on the processor.
  -IPC Shift (2.66 -> 1.41): the IPC dropped in the optimized version. In the baseline, Python runs many simple, predictable interpreter instructions in a row, which artificially increases IPC. In the optimized version, we   execute far fewer total instructions, but each instruction does heavier math work, so the IPC is lower even though the program finishes much faster.
 
 Some metrics where the optimized version performed worse:
