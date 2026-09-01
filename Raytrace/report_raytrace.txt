@@ -49,10 +49,24 @@ The biggest bottleneck in Raytrace is calculating ray-sphere intersections for e
 In Python, this is split into many separate steps: subtracting 3D vectors, calculating multiple dot products, squaring values, and evaluating the discriminant formula.
 This creates a lot of instruction overhead on the CPU.
 We want a single hardware block that does this entire calculation at once in parallel.
+
 We implemented a  hardware unit in SystemVerilog, which takes the ray and sphere parameters and checks the intersection in a single clock cycle.
-Inputs: Ray origin (x, y, z), ray direction (x, y, z), sphere center (x, y, z), and radius_sq.
-Outputs: v_dot_d_out, discriminant (disc_out), and hit_out flag.
-The unit works as a single instruction on the CPU. Instead of software running multiple math instructions, it calls one instruction that sends the coordinates to our hardware block and gets the intersection result back immediately.
+
+Inputs and Outputs:
+- clk, rst_n: System clock and active-low reset.
+- ray_ox, ray_oy, ray_oz: 32-bit signed fixed-point coordinates of the ray origin.
+- ray_dx, ray_dy, ray_dz: 32-bit signed fixed-point coordinates of the ray direction.
+- sphere_cx, sphere_cy, sphere_cz: 32-bit signed fixed-point coordinates of the sphere center.
+- radius_sq: 64-bit unsigned fixed-point pre-computed squared radius.
+- v_dot_d_out: 64-bit signed projection term (v · d).
+- disc_out: 64-bit signed discriminant result.
+- hit_out: 1-bit boolean flag indicating if the ray intersects the sphere (discriminant >= 0).
+- valid_in / valid_out: 1-bit control signals for data readiness.
+
+Hardware / Software Interface & Integration:
+- The unit is designed to work as an instruction extension directly inside the CPU pipeline, or connected via a standard memory-mapped bus (like AXI). 
+- Instead of the CPU executing multiple vector math operations and branches, the software triggers this single hardware instruction, passes ray/sphere vectors via registers, and receives the discriminant and hit flag immediately.
+- Software Modifications: The Python `Sphere.intersectionTime` method offloads calculation via a C-extension wrapper that passes vector values directly to the hardware unit, bypassing temporary `Vector` object allocations and interpreter overhead.
 
 The expected improvements:
 - Performance: Replaces around 15-20 separate CPU instructions with 1 single cycle.
