@@ -50,24 +50,33 @@ Some metrics where the optimized version performed worse:
   -Branch Mispredictions: The miss rate increased from 0.64% in the baseline to 2.24% in the compiled native code.
   -Elapsed Time (24.95 -> 47.46): The total profiling time was longer because of the one-time JIT compilation at startup, even though the actual simulation loop ran 76 times faster.
 
- 4. Hardware acceleration:
-	The biggest bottleneck in N-body is calculating the distance between pairs of bodies O(n^2).
-	In Python, the calculation is split into many separate steps: subtracting x, subtracting y, subtracting z, squaring each one, and adding them up.
-	This creates a lot of instruction overhead on the CPU.
-	We want a single hardware block that does this entire calculation at once in parallel.
+4. Hardware acceleration:
+The biggest bottleneck in N-body is calculating the distance between pairs of bodies O(n^2).
+In Python, the calculation is split into many separate steps: subtracting x, subtracting y, subtracting z, squaring each one, and adding them up.
+This creates a lot of instruction overhead on the CPU.
+We want a single hardware block that does this entire calculation at once in parallel.
 
-	We implemented a dedicated hardware unit in SystemVerilog, which takes the (x, y, z) coordinates of two bodies and calculates the distance between them in a single clock cycle.
-	Inputs: 3D coordinates of Body 1 (x1, y1, z1) and Body 2 (x2, y2, z2), clock, and reset.
-	Output: The squared distance r2_out.
+We implemented a hardware unit in SystemVerilog, which takes the (x, y, z) coordinates of two bodies and calculates the distance between them in a single clock cycle.
 
-	The unit works as a single instruction on the CPU. Instead of the software running multiple math instructions, it calls one single instruction that sends the coordinates to our hardware block and gets the distance 	      back immediately.
-	The expected improvements:
-	- Performance: Replaces around 7-8 separate CPU instructions with 1 single cycle.
-	- Area: Very small design requiring only 3 hardware multipliers and a few adders.
-	- Power: Saves power by avoiding repetitive CPU instruction decoding and register lookups.
+Inputs and Outputs:
+ - clk, rst_n: System clock and active-low reset.
+ - x1, y1, z1: 32-bit signed fixed-point coordinates of Body 1.
+ - x2, y2, z2: 32-bit signed fixed-point coordinates of Body 2.
+ - r_out: 64-bit unsigned squared distance output (r^2).
+ - valid_in / valid_out: 1-bit control signals for data readiness.
+
+Hardware / Software Interface & Integration:
+- The unit can be connected via a standard memory-mapped bus (like AXI).
+- Instead of the CPU running multiple arithmetic instructions, the software triggers this single hardware instruction, passes the coordinates directly from registers, and receives r_out back immediately.
+- Software Modifications: On the software side, the Python code calls a small C-extension wrapper that feeds the packed coordinate arrays directly to the unit, completely removing the math and list overhead from the Python interpreter loop.
+	
+The expected improvements:
+- Performance: Replaces around 7-8 separate CPU instructions with 1 single cycle.
+- Area: Very small design requiring only 3 hardware multipliers and a few adders.
+- Power: Saves power by avoiding repetitive CPU instruction decoding and register lookups.
 
 5. Conclusion
-   Profiling the Nbody benchmark showed that Python interpreter overhead and repeated math operations were the primary bottlenecks.
-   Because the simulation includes only 5 bodies, pure Python micro-optimizations and NumPy vectorization failed to improve performance due to data conversion and interpreter overhead.
-   Switching to Numba JIT compilation solved this issue by generating native machine code, achieving a 76.2x speedup and completely removing object allocation and list indexing overheads.
-   Finally, our proposed SystemVerilog hardware unit targets the remaining math bottleneck by computing 3D distances in a single clock cycle, replacing multiple CPU instructions with minimal hardware area.
+Profiling the Nbody benchmark showed that Python interpreter overhead and repeated math operations were the primary bottlenecks.
+Because the simulation includes only 5 bodies, pure Python micro-optimizations and NumPy vectorization failed to improve performance due to data conversion and interpreter overhead.
+Switching to Numba JIT compilation solved this issue by generating native machine code, achieving a 76.2x speedup and completely removing object allocation and list indexing overheads.
+Finally, our proposed SystemVerilog hardware unit targets the remaining math bottleneck by computing 3D distances in a single clock cycle, replacing multiple CPU instructions with minimal hardware area.
