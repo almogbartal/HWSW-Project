@@ -26,7 +26,7 @@ which come from the repeated gravity calculations and coordinate updates.
 	 - list_subscript (2.5%)
 	that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
 	 
-3. Optimization
+3. Optimizations
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
 - Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvements and sometimes ran even slower due to extra interpreter overhead.
 - Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Because the simulation only tracks 5 bodies, the overhead of creating arrays and passing data between Python and C was larger than the benefit of vectorization.
