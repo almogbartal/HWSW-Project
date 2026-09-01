@@ -8,7 +8,7 @@ Although there are only 5 bodies (which makes 10 unique pairs), every pair's cal
 Since these calculations repeat many times in the loop, we expect the loop to be a bottleneck.
 In addition, for every iteration, the loop does sequential floating-point math (subtraction, multiplication, power/square root), and repeatedly accesses and modifies the list elements using indexing, which probably creates a lot of overhead in python.
 
-2. Detecting Bottlenecks
+2. Detecting Bottlenecks:
 As we can see, the perf report and the Flame Graph immediately point to the same major issue: Python's interpreter overhead.
 In the perf report, we can see that _PyEval_EvalFrameDefault consumes 45.42% of the total runtime.
 In the Flame Graph, we can see it, as _PyEval_EvalFrameDefault occupies a large portion of the graph (with a wide base and high stack).
@@ -26,7 +26,7 @@ In addition, the perf report reveals more bottlenecks:
   - list_subscript (2.5%)
   that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
 
-3. Optimizations
+3. Optimization:
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
 - Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvements and sometimes ran even slower due to extra interpreter overhead.
 - Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Because the simulation only tracks 5 bodies, the overhead of creating arrays and passing data between Python and C was larger than the benefit of vectorization.
@@ -75,7 +75,7 @@ The expected improvements:
 - Area: Very small design requiring only 3 hardware multipliers and a few adders.
 - Power: Saves power by avoiding repetitive CPU instruction decoding and register lookups.
 
-5. Conclusions
+5. Conclusions:
 Profiling the Nbody benchmark showed that Python interpreter overhead and repeated math operations were the primary bottlenecks.
 Because the simulation includes only 5 bodies, pure Python micro-optimizations and NumPy vectorization failed to improve performance due to data conversion and interpreter overhead.
 Switching to Numba JIT compilation solved this issue by generating native machine code, achieving a 76.2x speedup and completely removing object allocation and list indexing overheads.
