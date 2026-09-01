@@ -25,7 +25,7 @@ Looking at the perf stats, perf report, and Flame Graph, the primary bottlenecks
 - Floating-Point and Math Overhead:
   - Math operations like float_mul (1.92%) and memory management like float_dealloc (1.66%) show repeated overhead from constantly creating and destroying temporary float numbers during 3D calculations.
 
-3. Optimization
+3. Optimization:
 We chose to make the following changes:
 - Adding slots to classes: We used slots on classes like Vector, Point, Ray, and Sphere so Python avoids creating heavy internal dictionaries for each object, making object creation and attribute lookups much faster.
 - Pre-calculating constant math: In the original implementation, the constant expression self.radius * self.radius was re-evaluated inside intersectionTime() during every intersection check.
