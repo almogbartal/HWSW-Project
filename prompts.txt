@@ -15,7 +15,7 @@ and what are the main math operations and objects that could slow it down?"
 # Prompts for trying to implement optimizations:
 "I want to optimize the code. let's try flatten the data structures, vectorize with numpy and cut down the math calculations in the loop to get better performance. will it help? suggest 
 ways you think will work better that i havent suggested yet"
-"why did the optimization gave worse results than the original one, can you explain the results in the perf and flamegraph and why it happened? what can i do else?"
+"why did the optimization give worse results than the original one, can you explain the results in the perf and flamegraph and why it happened? what can i do else?"
 "ok, lets try it, but first can you explain what is JIT (numba) and why it would work"
 
 # Prompts for Hardware Accelerators:
@@ -24,7 +24,7 @@ and then an explanation that describes the internal logic and operation of the a
 
 
 ** we used gemini to guide us through the analysis of this project: to help us write the code, examine the results and write the reports. 
-we didn't take its advice and code blindly, we challenged it and questioned its answeres, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
+we didn't take its advice and code blindly, we challenged it and questioned its answers, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
 also, we actively insisted on understanding the reasoning behind its answers.
 
 
