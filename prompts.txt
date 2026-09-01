@@ -20,8 +20,8 @@ ways you think will work better that i havent suggested yet"
 
 # Prompts for Hardware Accelerators:
 "now i want to make a hardware accelerator, take the most significant or repeated calculation in the code, and make it a single instruction using system verilog. i want the whole code
-and then an explanation that describes the internal logic and operation of the accelerator, including the inputs and outputs "
-
+and then an explanation that describes the internal logic and operation of the accelerator, including the inputs and outputs,
+Include a basic block diagram illustrating the hardware accelerator,all the pins, its interfaces, and its integration into the overall system"
 
 ** we used gemini to guide us through the analysis of this project: to help us write the code, examine the results and write the reports. 
 we didn't take its advice and code blindly, we challenged it and questioned its answers, and we critically evaluated, tested, and refined all suggested code and answers to ensure technical accuracy.
