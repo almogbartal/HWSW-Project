@@ -26,29 +26,29 @@ which come from the repeated gravity calculations and coordinate updates.
 	 - list_subscript (2.5%)
 	that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
 	 
-3.	Optimization
+3. Optimization
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
--Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvments and sometimes ran even slower due to extra interpreter overhead.
--Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Because the simulation only tracks 5 bodies, the overhead of creating arrays and passing data between Python and C was larger than the benefit of vectorization.
-* Since the benchmark simulates a small system of only 5 celestial bodies, manual micro-optimizations or NumPy vectorization were not as meaningful, however these techniques might have more noticeable benefits in large-scale simulations with significantly higher body counts.
+- Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvements and sometimes ran even slower due to extra interpreter overhead.
+- Vectorization (NumPy): NumPy (a Python library for fast array calculations) provided no real improvement here and often ran slower than the baseline. Because the simulation only tracks 5 bodies, the overhead of creating arrays and passing data between Python and C was larger than the benefit of vectorization.
+** Since the benchmark simulates a small system of only 5 celestial bodies, manual micro-optimizations or NumPy vectorization were not as meaningful, however these techniques might have more noticeable benefits in large-scale simulations with significantly higher body counts.
+
 the chosen optimization:
--JIT Compilation (Numba): Just-In-Time compilation via numba was adopted as the final solution. 
- This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck.
- By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
- resulting in:
-  -Mean Execution Time: Dropped from 238 ms down to 3.11 ms with Numba JIT, achieving a 76.2 times speedup (98.69 % runtime reduction).
-  -Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 45.42% total runtime in the baseline down to 11.36% in the optimized version.  
-  -Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math—float_mul (5.76%), float_sub (2.74%), and float_add (2.69 %), which totaled 11.19% in the baseline—were reduced to 0.00% as             calculations moved directly to hardware FPU registers.
-  -Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
-  -List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to 0.00% by switching to contiguous C-array buffer pointers.
-  -Instruction Count Reduction ( Baseline: 154,906,160,090 instructions, Optimized: 153,824,516,534       instructions): the massive drop in executed instructions proves that Numba JIT successfully eliminated     the heavy CPython interpreter loop overhead (_PyEval_EvalFrameDefault), replacing thousands of dynamically interpreted evaluation steps with direct native assembly instructions.
-  -Cycle Reduction (81.25% Reduction - Baseline: 58,339,908,386 cycles, Optimized: 10,918,571,923 cycles): the sharp reduction in CPU clock cycles directly drives the raw performance improvement, freeing up execution        resources on the processor.
- -IPC Shift (2.66 -> 1.41): the IPC dropped in the optimized version. In the baseline, Python runs many simple, predictable interpreter instructions in a row, which artificially increases IPC. In the optimized version, we   execute far fewer total instructions, but each instruction does heavier math work, so the IPC is lower even though the program finishes much faster.
+- JIT Compilation (Numba): Just-In-Time compilation via numba was adopted as the final solution. This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck. By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
+
+resulting in:
+- Mean Execution Time: Dropped from 238 ms down to 3.16 ms with Numba JIT, achieving a 75.32x speedup (98.67% runtime reduction).
+- Interpreter Overhead (_PyEval_EvalFrameDefault): Reduced from 45.42% total runtime in the baseline down to 11.48% in the optimized version.
+- Floating-Point Operations Overhead: CPython wrapper overheads for floating-point math- float_mul (5.76%), float_sub (2.74%), and float_add (2.69 %), which totaled 11.19% in the baseline - were reduced to 0.00% as calculations moved directly to hardware FPU registers.
+- Object Allocation Overhead (float_dealloc) : Memory management overhead from repeatedly creating and destroying Python float objects dropped from 5.12% in the baseline down to 0.00% in the optimized code.
+- List Access Overhead : Dynamic list access overheads, which consumed 6.68% of baseline execution time, were reduced to 0.00% by switching to contiguous C-array buffer pointers.
+- Instruction Count Reduction (0.69% Reduction - Baseline: 154,899,574,544 instructions, Optimized: 153,824,516,534 instructions): there was a drop in executed instructions due to Numba JIT successfully eliminated the heavy CPython interpreter loop overhead (_PyEval_EvalFrameDefault), replacing over 1 billion of dynamically interpreted evaluation steps with direct native assembly instructions.
+- IPC Shift (2.66 -> 1.41): the IPC dropped in the optimized version. In the baseline, Python runs many simple, predictable interpreter instructions in a row, which artificially increases IPC. In the optimized version, we execute far fewer total instructions, but each instruction does heavier math work, so the IPC is lower even though the program finishes much faster.
 
 Some metrics where the optimized version performed worse:
-  -Page Faults: Increased from 117,785 to 385,021 due to dynamic code compilation and memory allocation during the JIT warmup phase.
-  -Branch Mispredictions: The miss rate increased from 0.64% in the baseline to 2.24% in the compiled native code.
-  -Elapsed Time (24.95 -> 47.46): The total profiling time was longer because of the one-time JIT compilation at startup, even though the actual simulation loop ran 76 times faster.
+- Page Faults: Increased from 117,785 to 385,021 due to dynamic code compilation and memory allocation during the JIT warmup phase.
+- Branch Mispredictions: The miss rate increased from 0.64% in the baseline to 2.24% in the compiled native code.
+- Elapsed Time (24.92 -> 47.56): The total profiling time was longer because of the one-time JIT compilation at startup, even though the actual simulation loop ran 75x faster.
+- CPU Cycles Increase (87.65% Increase - Baseline: 58,184,271,258 cycles, Optimized: 109,185,714,923 cycles): The total CPU clock cycles recorded across the entire run increased due to the heavy background compilation and optimization passes executed by LLVM during the initial Numba JIT warmup phase, even though each individual simulation step ran 75x faster.
 
 4. Hardware acceleration:
 The biggest bottleneck in N-body is calculating the distance between pairs of bodies O(n^2).
