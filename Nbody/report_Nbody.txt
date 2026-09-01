@@ -1,8 +1,8 @@
 1. Benchmark Analysis:
 The Nbody benchmark simulates the movement of 5 bodies (planets): sun, jupiter, saturn, uranus and neptune, calculating the gravitational pull between them.
 It uses basic python arithmetic operations and doesn't use external numerical libraries like NumPy for the actual N-body calculations.
-It uses basic python data structures, with each body represented by a tuple containing a 3D position list, a 3D velocity list, and a floating point mass. 	
-	
+It uses basic python data structures, with each body represented by a tuple containing a 3D position list, a 3D velocity list, and a floating point mass.
+
 The algorithm calculates the gravity between every pair of bodies (O(n^2)), updating their positions step by step.
 Although there are only 5 bodies (which makes 10 unique pairs), every pair's calculation is repeated in many iterations inside the loop.
 Since these calculations repeat many times in the loop, we expect the loop to be a bottleneck.
@@ -13,19 +13,19 @@ As we can see, the perf report and the Flame Graph immediately point to the same
 In the perf report, we can see that _PyEval_EvalFrameDefault consumes 45.42% of the total runtime.
 In the Flame Graph, we can see it, as _PyEval_EvalFrameDefault occupies a large portion of the graph (with a wide base and high stack).
 Both of these results make it clear that the script spends most of its execution runtime inside Python's internal interpreter loop, making the interpreter itself the main bottleneck.
-   
+
 In addition, the perf report reveals more bottlenecks:
--floating-point operations:
-	- float_mul (5.76%)
-	- float_sub (2.74%)
-	- float_add (2.69%)
-which come from the repeated gravity calculations and coordinate updates.
+- floating-point operations:
+  - float_mul (5.76%)
+  - float_sub (2.74%)
+  - float_add (2.69%)
+  which come from the repeated gravity calculations and coordinate updates.
 - frequent object memory management overhead shown by float_dealloc (4.86%) that is caused by python constantly creating and destroying temporary float objects during calculations.
-   - continuous list modifications or lookups like:
-     - list_ass_subscript (4.06%)
-	 - list_subscript (2.5%)
-	that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
-	 
+- continuous list modifications or lookups like:
+  - list_ass_subscript (4.06%)
+  - list_subscript (2.5%)
+  that are caused by repeatedly accessing and updating coordinates like v1[0] and r[0].
+
 3. Optimizations
 To reduce execution time in the N-body benchmark, three main approaches were evaluated:
 - Micro-optimizations: Manual loop unrolling and math calculations in pure Python gave minimal improvements and sometimes ran even slower due to extra interpreter overhead.
@@ -59,23 +59,23 @@ We want a single hardware block that does this entire calculation at once in par
 We implemented a hardware unit in SystemVerilog, which takes the (x, y, z) coordinates of two bodies and calculates the distance between them in a single clock cycle.
 
 Inputs and Outputs:
- - clk, rst_n: System clock and active-low reset.
- - x1, y1, z1: 32-bit signed fixed-point coordinates of Body 1.
- - x2, y2, z2: 32-bit signed fixed-point coordinates of Body 2.
- - r_out: 64-bit unsigned squared distance output (r^2).
- - valid_in / valid_out: 1-bit control signals for data readiness.
+- clk, rst_n: System clock and active-low reset.
+- x1, y1, z1: 32-bit signed fixed-point coordinates of Body 1.
+- x2, y2, z2: 32-bit signed fixed-point coordinates of Body 2.
+- r_out: 64-bit unsigned squared distance output (r^2).
+- valid_in / valid_out: 1-bit control signals for data readiness.
 
 Hardware / Software Interface & Integration:
 - The unit can be connected via a standard memory-mapped bus (like AXI). By adding a DMA controller to the AXI memory bus, the CPU is completely freed from heavy lifting during calculation. The DMA automatically streams coordinate data straight from system memory into the hardware unit in fast, continuous batches, allowing the accelerator to calculate distances autonomously while writing the final results directly back to memory and signaling the CPU via interrupt only once the entire job is complete.
 - Instead of the CPU running multiple arithmetic instructions, the software triggers this single hardware instruction, passes the coordinates directly from registers, and receives r_out back immediately.
 - Software Modifications: On the software side, the Python code calls a small C-extension wrapper that feeds the packed coordinate arrays directly to the unit, completely removing the math and list overhead from the Python interpreter loop.
-	
+
 The expected improvements:
 - Performance: Replaces around 7-8 separate CPU instructions with 1 single cycle.
 - Area: Very small design requiring only 3 hardware multipliers and a few adders.
 - Power: Saves power by avoiding repetitive CPU instruction decoding and register lookups.
 
-5. Conclusion
+5. Conclusions
 Profiling the Nbody benchmark showed that Python interpreter overhead and repeated math operations were the primary bottlenecks.
 Because the simulation includes only 5 bodies, pure Python micro-optimizations and NumPy vectorization failed to improve performance due to data conversion and interpreter overhead.
 Switching to Numba JIT compilation solved this issue by generating native machine code, achieving a 76.2x speedup and completely removing object allocation and list indexing overheads.
