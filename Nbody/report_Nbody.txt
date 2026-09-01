@@ -66,7 +66,7 @@ Inputs and Outputs:
  - valid_in / valid_out: 1-bit control signals for data readiness.
 
 Hardware / Software Interface & Integration:
-- The unit can be connected via a standard memory-mapped bus (like AXI).
+- The unit can be connected via a standard memory-mapped bus (like AXI). By adding a DMA controller to the AXI memory bus, the CPU is completely freed from heavy lifting during calculation. The DMA automatically streams coordinate data straight from system memory into the hardware unit in fast, continuous batches, allowing the accelerator to calculate distances autonomously while writing the final results directly back to memory and signaling the CPU via interrupt only once the entire job is complete.
 - Instead of the CPU running multiple arithmetic instructions, the software triggers this single hardware instruction, passes the coordinates directly from registers, and receives r_out back immediately.
 - Software Modifications: On the software side, the Python code calls a small C-extension wrapper that feeds the packed coordinate arrays directly to the unit, completely removing the math and list overhead from the Python interpreter loop.
 	
