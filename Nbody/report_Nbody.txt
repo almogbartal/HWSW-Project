@@ -33,7 +33,9 @@ To reduce execution time in the N-body benchmark, three main approaches were eva
 ** Since the benchmark simulates a small system of only 5 celestial bodies, manual micro-optimizations or NumPy vectorization were not as meaningful, however these techniques might have more noticeable benefits in large-scale simulations with significantly higher body counts.
 
 the chosen optimization:
-- JIT Compilation (Numba): Just-In-Time compilation via numba was adopted as the final solution. This is a Python tool that converts code into fast machine language on the go which resolved the CPU bottleneck. By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead,
+- JIT Compilation (Numba) with Numpy which work as a team: NumPy organizes the data into a single, continuous block of C-memory (which scattered Python lists can't do), while Numba runs compiled scalar loops over that memory.
+JIT (Just-In-Time compilation) via numba is a Python tool that converts code into fast machine language the very first time the function is called (at runtime), which resolved the CPU bottleneck. By compiling the O(n^2) interaction loops directly into native VM machine code at runtime, it bypassed bytecode interpretation and object allocation overhead.
+
 
 resulting in:
 - Mean Execution Time: Dropped from 238 ms down to 3.16 ms with Numba JIT, achieving a 75.32x speedup (98.67% runtime reduction).
